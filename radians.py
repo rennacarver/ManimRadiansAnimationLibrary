@@ -1,5 +1,9 @@
 from manim import *
 
+#for scene 'Circles0to6Rad' in manim CE v0.8.0
+#   navigate to /manim/mobject/geometry.py
+#   comment out line 140 "self.reset_endpoints_based_on_top(tip, at_start)"
+
 config.background_color = "#D5D4C9"
 
 config.tex_template = TexTemplate()

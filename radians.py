@@ -1,10 +1,8 @@
 from manim import *
 
-#for scene 'Circles0to6Rad' in manim CE v0.8.0
+#   for scene 'Circles0to6Rad' in manim CE v0.8.0
 #   navigate to /manim/mobject/geometry.py
 #   comment out line 140 "self.reset_endpoints_based_on_top(tip, at_start)"
-
-config.background_color = "#D5D4C9"
 
 config.tex_template = TexTemplate()
 
@@ -17,6 +15,15 @@ ANIM_AQUA = "#42A996"
 ANIM_PURPLE = "#CC0099"
 
 TEXT_COLOR = "#463622"
+
+def get_background():
+    background = Rectangle(
+            width=config["frame_width"],
+            height=config["frame_width"],
+            stroke_width=0,
+            fill_color=color.color_gradient(["#D5D4C9","#DBD7CF"], 32),
+            fill_opacity=1, z_index=-1000)
+    return background
 
 class Compass():
     @classmethod
@@ -40,21 +47,33 @@ class Compass():
 class Timer():
     @classmethod
     def create_timer(self, seconds=5):
-        numbers = [Text(str(i), color=TEXT_COLOR).scale(0.4).to_corner(DL) for i in range(seconds+1)]
+        numbers = [Text(str(i), color=TEXT_COLOR, font="Segoe UI Light").scale(0.4) for i in range(seconds+1)]
         numbers.reverse()
-        circle = Circle(radius=max(numbers[0].height, numbers[0].width)*1.5, color=ANIM_ORANGE, stroke_width=2).move_to(numbers[0])
+        circle = Circle(radius=max(numbers[0].height, numbers[0].width)*1.5, color=ANIM_ORANGE, stroke_width=2).to_corner(DL).rotate(PI/2)
+        for i in numbers:
+            i.move_to(circle.get_center())
 
         return VGroup(VGroup(*numbers), circle)
 
     @classmethod
     def animate(self, renderer, timer):
+        global time_passed
+        time_passed = 0
         numbers = timer[0]
         circle = timer[1]
 
-        transforms = [ReplacementTransform(numbers[i], numbers[i+1], run_time=0.2) for i in range(len(numbers)-1)]
+        def get_number(dt):
+            global time_passed
+            index = min(int(time_passed), len(numbers) - 1)
+            time_passed += dt 
 
-        renderer.play(LaggedStart(Uncreate(circle, run_time=len(numbers)-1),
-            *transforms, lag_ratio=0.5, run_time=5))        
+            return numbers[index]
+
+        numbers[0].add_updater(lambda m, dt: m.become(get_number(dt)))
+        renderer.play(Uncreate(circle, rate_func=lambda t: 1-t), run_time=5)
+        numbers[0].clear_updaters()
+        numbers[0].become(numbers[-1])   
+        renderer.play(FadeOut(numbers[0]), run_time=0.5) 
 
 class DashedCircles(Scene):
     def construct(self):
@@ -69,8 +88,11 @@ class DashedCircles(Scene):
 
         timer = Timer.create_timer()
 
+        self.add(get_background())
+
         self.add(circle, vec, timer[1], timer[0][0])
         Timer.animate(self, timer)
+        self.wait(0.5)
 
     def get_arrow(self, circle, angle_tracker=None, radius_tracker=None):
         global radius, r
@@ -156,6 +178,8 @@ class BigGridCompasses(Scene):
         copy_dots = VGroup(*copy_dots)
 
         #self.add(grid, red_dot, green_dot, panama, rotterdam)
+
+        self.add(get_background())
         
         self.play(Create(vertical_lines), Create(horizontal_lines), run_time=3)
         self.wait(0.5)
@@ -284,6 +308,8 @@ class GridCompass(Scene):
 
         vectors.sort()
 
+        self.add(get_background())
+
         # self.add(compass1)
         # self.add(grid_objs.shift(shift_factor))
         self.play(Create(grid), run_time=4)
@@ -321,6 +347,8 @@ class Circles0to6Rad(Scene):
         group = VGroup(rad, label_rad).set_color(TEXT_COLOR).next_to(circle1[0], DOWN).add_updater(lambda m: m.become(
             VGroup(rad, label_rad).arrange(buff=0.2).set_color(TEXT_COLOR).next_to(circle1[0], DOWN)
         ))
+
+        self.add(get_background())
 
         self.add(circle1, circle2, circle3, group)
         self.wait(0.5)

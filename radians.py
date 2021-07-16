@@ -1,19 +1,8 @@
-from typing import final
 from manim import *
 
 config.background_color = "#D5D4C9"
 
-config.tex_template = TexTemplate(
-    tex_compiler="xelatex",
-    output_format=".xdv",
-    preamble=r"""
-    \usepackage[english]{babel}
-    \usepackage{amsmath}
-    \usepackage{amssymb}
-    \usepackage{fontspec}
-    \setmainfont{Segoe UI Light}
-    \usepackage[defaultmathsizes]{mathastext}
-    """)
+config.tex_template = TexTemplate()
 
 ANIM_ORANGE = "#C55A11"
 ANIM_BLACK = "#404040"
@@ -37,12 +26,79 @@ class Compass():
         labels_text = VGroup()
 
         for text, coord in zip(labels, [UP, DOWN, LEFT, RIGHT]):
-            label = Text(text, font="Segoe UI Light", color=ANIM_BLACK, stroke_width=1).scale(0.5).next_to(arrows.get_edge_center(coord), coord)
+            label = Text(text, color=ANIM_BLACK, stroke_width=1).scale(0.5).next_to(arrows.get_edge_center(coord), coord)
             labels_text.add(label)
 
         compass = VGroup(arrows, labels_text).rotate(rotation)
 
         return compass
+
+class Timer():
+    @classmethod
+    def create_timer(self, seconds=5):
+        numbers = [Text(str(i), color=TEXT_COLOR).scale(0.4).to_corner(DL) for i in range(seconds+1)]
+        numbers.reverse()
+        circle = Circle(radius=max(numbers[0].height, numbers[0].width)*1.5, color=ANIM_ORANGE, stroke_width=2).move_to(numbers[0])
+
+        return VGroup(VGroup(*numbers), circle)
+
+    @classmethod
+    def animate(self, renderer, timer):
+        numbers = timer[0]
+        circle = timer[1]
+
+        transforms = [ReplacementTransform(numbers[i], numbers[i+1], run_time=0.2) for i in range(len(numbers)-1)]
+
+        renderer.play(LaggedStart(Uncreate(circle, run_time=len(numbers)-1),
+            *transforms, lag_ratio=0.5, run_time=5))        
+
+class DashedCircles(Scene):
+    def construct(self):
+        radius_tracker = ValueTracker(0.925)
+        angle_tracker = ValueTracker(40 * DEGREES)
+
+        circle = Circle(radius=radius_tracker.get_value(), color=ANIM_BLACK).add_updater(
+            lambda m: m.become(Circle(radius=radius_tracker.get_value(), color=ANIM_BLACK))
+        )
+
+        vec = self.get_arrow(circle, angle_tracker=angle_tracker, radius_tracker=radius_tracker)
+
+        timer = Timer.create_timer()
+
+        self.add(circle, vec, timer[1], timer[0][0])
+        Timer.animate(self, timer)
+
+    def get_arrow(self, circle, angle_tracker=None, radius_tracker=None):
+        global radius, r
+        if radius_tracker:
+            r = radius_tracker.get_value
+            radius = r()
+        else:
+            radius = circle.radius
+            r = lambda: radius
+
+        angle = angle_tracker.get_value() if angle_tracker else 0
+        p = circle.get_center()
+
+        a = angle_tracker.get_value
+
+        arrow = Arrow(
+            start=p, 
+            end=(p[0] + np.cos(angle)*radius, p[1] + np.sin(angle)*radius, 0),
+            color=ANIM_ORANGE,
+            tip_length=0.2,
+            buff=0)
+
+        arrow.add_updater(lambda m: m.become(
+            Arrow(
+            start=p, 
+            end=(p[0] + np.cos(a())*r(), p[1] + np.sin(a())*r(), 0),
+            color=ANIM_ORANGE,
+            tip_length=0.2,
+            buff=0))
+            )
+
+        return arrow
 
 class BigGridCompasses(Scene):
     def construct(self):

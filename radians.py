@@ -1,3 +1,4 @@
+from re import M
 from manim import *
 
 #   for scene 'Circles0to6Rad' in manim CE v0.8.0
@@ -5,6 +6,18 @@ from manim import *
 #   comment out line 140 "self.reset_endpoints_based_on_top(tip, at_start)"
 
 config.tex_template = TexTemplate()
+
+segoe_template = TexTemplate(
+    tex_compiler="xelatex",
+    output_format=".xdv",
+    preamble=r"""
+    \usepackage[english]{babel}
+    \usepackage{amsmath}
+    \usepackage{amssymb}
+    \usepackage{fontspec}
+    \setmainfont{Segoe UI Light}
+    \usepackage[defaultmathsizes]{mathastext}
+    """)
 
 ANIM_ORANGE = "#C55A11"
 ANIM_BLACK = "#404040"
@@ -28,8 +41,11 @@ def get_background():
 class Compass():
     @classmethod
     def create_compass(self, labels=None, coords=ORIGIN, rotation=0):
-        arrows = VGroup(*[DoubleArrow(start=LEFT*1.2, end=RIGHT*1.2, tip_length=.2, color=ANIM_BLACK, stroke_width=6).rotate(PI/2 if i else 0) for i in range(2)])
+        arrows = VGroup(*[DoubleArrow(start=LEFT*1.2, end=RIGHT*1.2, tip_length=.2, color=ANIM_BLACK, stroke_width=6, z_index=-10).rotate(PI/2 if i else 0) for i in range(2)])
         arrows.move_to(coords)
+        for a in arrows:
+            for tip in a.get_tips():
+                tip.z_index=-10
 
         if labels is None:
             return arrows.rotate(rotation)
@@ -76,24 +92,148 @@ class Timer():
         renderer.play(FadeOut(numbers[0]), run_time=0.5)
 
 class DashedCircles(Scene):
+    #config.disable_caching = True
     def construct(self):
+        def show_dashes_and_labels(angle):
+            angle_int = int(angle)
+            angles_to_show = [i % 360 for i in range(self.last_dashed_angle + 1, angle_int + 1)]
+            label_to_show = np.intersect1d(angles_to_show, angles_w_labels)
+            if label_to_show.size > 0:
+                label_to_show = angles_w_labels.index(label_to_show[0])
+                labels[label_to_show].add_updater(lambda m, dt: m.set_opacity(m.get_fill_opacity() + dt *2))
+                labels[label_to_show].set_opacity(0)
+                self.add(labels[label_to_show])
+                
+            self.last_dashed_angle = angle_int
+            
+            if angles_to_show:
+                for i in angles_to_show:
+                    self.add(dashes[i])
+
         radius_tracker = ValueTracker(0.925)
-        angle_tracker = ValueTracker(40 * DEGREES)
+        angle_tracker = ValueTracker(40)
+
+        end_radius = 1.5
+        
+        self.last_dashed_angle = int(angle_tracker.get_value()) - 1
+        angles_w_labels = [0, 90, 180, 270]
 
         circle = Circle(radius=radius_tracker.get_value(), color=ANIM_BLACK).add_updater(
             lambda m: m.become(Circle(radius=radius_tracker.get_value(), color=ANIM_BLACK))
         )
 
-        vec = self.get_arrow(circle, angle_tracker=angle_tracker, radius_tracker=radius_tracker)
+        tmp_circ = Circle(radius=end_radius)
 
+        dashes = self.get_dashes(tmp_circ)
+        labels = self.get_labels(tmp_circ)
+
+        labels1 = self.get_labels(tmp_circ, labels=["0, 100", "25", "50", "75"])
+        labels2 = self.get_labels(tmp_circ, labels=["0, 400", "100", "200", "300"])
+
+        vec = self.get_arrow(tmp_circ, angle_tracker=angle_tracker, radius_tracker=radius_tracker)
         timer = Timer.create_timer()
 
+        angle_label = self.get_angle_label(vec, angle_tracker.get_value(), 360).add_updater(lambda m: m.become(
+            self.get_angle_label(vec, angle_tracker.get_value(), 360)
+        ))
+
+        dasher = VMobject().add_updater(lambda m: show_dashes_and_labels(angle_tracker.get_value()))
+        dasher.suspend_updating()
+
+        circle_r = Circle(radius=end_radius, color=ANIM_BLACK).shift(RIGHT*4.5)
+        labels_r = labels1.copy()
+        dashes_r = self.get_dashes(circle_r)
+        vec_r = self.get_arrow(circle_r, angle_tracker)
+        angle_label_r = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_r, angle_tracker.get_value(), 100, False, 2, 1.3)), call_updater=True)
+
+        group_r = VGroup(circle_r, labels_r, vec_r, angle_label_r, dashes_r)
+
+        circle_l = Circle(radius=end_radius, color=ANIM_BLACK).shift(LEFT*4.5)
+        labels_l = labels2.copy()
+        dashes_l = self.get_dashes(circle_l)
+        vec_l = self.get_arrow(circle_l, angle_tracker)
+        angle_label_l = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value(), 400, False, 2, 1.3)), call_updater=True)
+
+        group_l = VGroup(circle_l, labels_l, vec_l, angle_label_l, dashes_l)
+
+        ##########################
+        
         self.add(get_background())
 
-        self.add(circle, vec, timer[1], timer[0][0])
+        radius_tracker.set_value(1.5)
+        vec.update()
+        circle.update()
+        angle_label.update()
+        self.add(circle, dashes, labels, angle_label, vec)
+        angle_label.clear_updaters()
+
+        self.add(circle, dasher)
+        self.wait(0.5)
+        self.play(radius_tracker.animate.set_value(1.5), run_time=2)
+        vec.update()
+        circle.update()
+        angle_label.update()
+        self.wait(0.5)
+        vec.suspend_updating()
+        self.play(GrowArrow(vec))
+        vec.resume_updating()
+        self.wait(0.5)
+        self.play(FadeIn(timer[0][0], timer[1]), run_time=0.8)
+        self.wait(0.3)
         Timer.animate(self, timer)
         self.wait(0.5)
+        angle_label.suspend_updating()
+        self.play(Write(angle_label))
+        angle_label.resume_updating()
+        self.wait(0.5)
 
+        dasher.resume_updating()
+        self.play(angle_tracker.animate().set_value(400), run_time=5)
+        for i in labels:
+            i.suspend_updating()
+        dasher.suspend_updating()
+        angle_label.clear_updaters()
+        self.wait(0.5)
+
+        angle_tracker.set_value(40)
+        angle_label.add_updater(lambda m: m.become(
+            self.get_angle_label(vec, angle_tracker.get_value(), 360, decimal_places=2, scaling=1.3)))
+        self.play(angle_tracker.animate(rate_func=linear).set_value(39), run_time=2)
+        self.play(angle_tracker.animate(rate_func=linear).set_value(40), run_time=2)
+        self.wait(0.5)
+
+        objs_w_updaters = [vec_l, vec_r, angle_label_l, angle_label_r]
+
+        for i in objs_w_updaters:
+            i.suspend_updating()
+
+        tmp_label = labels.copy()
+        tmp_ang_label = angle_label.copy()
+
+        tmp_ang_r = angle_label_r.copy().shift(LEFT*4.5)
+        tmp_ang_l = angle_label_l.copy().shift(RIGHT*4.5)
+
+        self.play(ReplacementTransform(labels, labels1), ReplacementTransform(angle_label, tmp_ang_r), run_time=1.5)
+        self.wait(0.5)
+        self.play(ReplacementTransform(labels1, labels2), ReplacementTransform(tmp_ang_r, tmp_ang_l), run_time=1.5)
+        self.wait(0.5)
+        self.play(ReplacementTransform(labels2, tmp_label), ReplacementTransform(tmp_ang_l, tmp_ang_label), run_time=1.5)
+        self.wait(0.5)
+
+        tmp_label = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value())), call_updater=True)
+
+        labels_r.shift(RIGHT*4.5)
+        labels_l.shift(LEFT*4.5)
+
+        self.play(FadeIn(group_r, group_l), run_time=2)
+        self.wait(0.5)
+
+        for i in objs_w_updaters:
+            i.resume_updating()
+
+        self.play(angle_tracker.animate.set_value(100), run_time=2)
+        self.wait(0.5)
+        
     def get_arrow(self, circle, angle_tracker=None, radius_tracker=None):
         global radius, r
         if radius_tracker:
@@ -103,7 +243,7 @@ class DashedCircles(Scene):
             radius = circle.radius
             r = lambda: radius
 
-        angle = angle_tracker.get_value() if angle_tracker else 0
+        angle = angle_tracker.get_value() * DEGREES if angle_tracker else 0
         p = circle.get_center()
 
         a = angle_tracker.get_value
@@ -118,13 +258,60 @@ class DashedCircles(Scene):
         arrow.add_updater(lambda m: m.become(
             Arrow(
             start=p,
-            end=(p[0] + np.cos(a())*r(), p[1] + np.sin(a())*r(), 0),
+            end=(p[0] + np.cos(a()*DEGREES)*r(), p[1] + np.sin(a()*DEGREES)*r(), 0),
             color=ANIM_ORANGE,
             tip_length=0.2,
             buff=0))
             )
 
         return arrow
+
+    def get_dashes(self, circle, offset1=0.05, offset2=0.06):
+        p = circle.get_center()
+        r = circle.radius
+        r -= offset1
+        
+        dashes = VGroup()
+
+        thick_angles = [0, 90, 180, 270]
+        middle_angles = range(0, 360, 10)
+
+        for i in range(0, 360):
+            a = i * DEGREES
+            thick = int(i in thick_angles)
+            middle = int(i in middle_angles)
+
+            if thick:
+                r -= offset2
+            
+            elif middle:
+                r -= offset2 / 2
+
+            dash = Line(stroke_width=1 + max(thick*1.5, middle/2), color=ANIM_BLACK, z_index=-10)
+            dash.set_length(0.07 + max(0.18*thick, 0.1*middle)).rotate(a)
+            dash.move_to((p[0] + np.cos(a) * r, p[1] + np.sin(a) * r, 0))
+            dashes.add(dash)
+
+            r = circle.radius - offset1
+
+        return dashes
+
+    def get_labels(self, circle, labels=["0°, 360°", "90°", "180°", "270°"]):
+        labels_text = VGroup()
+        for i, d in zip(labels, [RIGHT, UP, LEFT, DOWN]):
+            labels_text.add(Text(i, font="Segoe UI Light", color=TEXT_COLOR, stroke_width=1).scale(0.2).next_to(circle.get_edge_center(d), d, buff=0.3))
+
+        return labels_text
+
+    def get_angle_label(self, arrow, angle, max_angle, is_degree=True, decimal_places=0, scaling=1.2):
+        angle = angle % max_angle
+        custom_angle = round(angle * max_angle / 360, decimal_places if decimal_places else None)
+        string = str(custom_angle)
+        if is_degree:
+            string += "°"
+        pos = arrow.copy().scale(scaling).get_end()
+        label = Text(string, font="Segoe UI Light", color=ANIM_ORANGE, stroke_width=1).scale(0.2)
+        return label.move_to(pos)
 
 class BigGridCompasses(Scene):
     def construct(self):
@@ -160,12 +347,21 @@ class BigGridCompasses(Scene):
 
         radius = 0.925
 
-        circle = Circle(radius=radius, color=ANIM_BLACK, fill_opacity=1).move_to(RIGHT*4)
-        outer_circle = Circle(radius=radius, color=ANIM_BLACK).move_to(RIGHT*4)
+        circle = Circle(radius=radius, color=ANIM_BLACK, fill_opacity=1, z_index=-1).move_to(RIGHT*4)
+        outer_circle = Circle(radius=radius, color=ANIM_BLACK, z_index=-1).move_to(RIGHT*4)
 
-        tracker = ValueTracker(PI/2)
+        tracker = ValueTracker(PI/4)
 
-        vec = Arrow(start=RIGHT*4, end=(4 + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE, buff=0)
+        radius += 0.025
+
+        vec = Arrow(start=RIGHT*4, end=(4 + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE, buff=0, z_index=1000,
+            stroke_width=6, tip_length=0.2, max_stroke_width_to_length_ratio=6)
+
+        vec.add_updater(lambda m: m.become(
+            Arrow(start=outer_circle.get_center(), end=(outer_circle.get_x() + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE, buff=0,
+            z_index=1000, stroke_width=6, tip_length=0.2, max_stroke_width_to_length_ratio=6)))
+
+        vec.suspend_updating()
 
         rectangle = Rectangle(height=buff*12.5, width=buff*16.5, color=ANIM_BLACK, fill_opacity=1, z_index=0).shift(shift_factor)
 
@@ -200,7 +396,7 @@ class BigGridCompasses(Scene):
             compass2[1].animate.rotate(-PI/4)
             )
         self.wait(0.5)
-        self.play(GrowArrow(vector))
+        self.play(GrowArrow(vector), GrowArrow(vec))
         self.wait(0.5)
         for j, c in enumerate(compasses[:2]):
             self.add(c.rotate(-PI/4))
@@ -241,11 +437,7 @@ class BigGridCompasses(Scene):
         self.remove(*compasses, compass1[0], compass2[0])
         self.play(TransformMatchingShapes(circle, outer_circle))
         self.wait(0.5)
-
-        self.play(GrowArrow(vec))
-        vec.add_updater(lambda m: m.become(
-            Arrow(start=outer_circle.get_center(), end=(outer_circle.get_x() + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE, buff=0)
-            ))
+        vec.resume_updating()
         self.wait(0.5)
         self.play(tracker.animate.set_value(PI/4))
         self.wait(0.5)
@@ -329,6 +521,7 @@ class GridCompass(Scene):
             self.wait(0.2)
         self.wait(0.5)
         self.play(FadeOut(grid_objs, compass1, vectors))
+        self.wait(0.5)
 
 class Circles0to6Rad(Scene):
 

@@ -356,7 +356,7 @@ class Circles0to6Rad(Scene):
         self.add(circle1, circle2, circle3)
         rad_title = Text(str(radtitle_value) + ' radians', font='Segoe UI Light').scale(0.8).shift(
             3 * DOWN).set_color(
-            "#404040")
+            ANIM_BLACK)
         self.play(FadeIn(rad_title))
         self.wait(2)
         radtitle_value += 1
@@ -366,13 +366,13 @@ class Circles0to6Rad(Scene):
                 self.play(tracker.animate.set_value(i), FadeOut(rad_title))
                 rad_title = Text(str(radtitle_value) + ' radian', font='Segoe UI Light').scale(0.8).shift(
                     3 * DOWN).set_color(
-                    "#404040")
+                    ANIM_BLACK)
                 self.play(FadeIn(rad_title))
             elif i > 1:
                 self.play(tracker.animate.set_value(i), FadeOut(rad_title))
                 rad_title = Text(str(radtitle_value) + ' radians', font='Segoe UI Light').scale(0.8).shift(
                     3 * DOWN).set_color(
-                    "#404040")
+                    ANIM_BLACK)
                 self.play(FadeIn(rad_title))
             self.wait(2)
             radtitle_value += 1
@@ -380,7 +380,7 @@ class Circles0to6Rad(Scene):
         self.play(tracker.animate.set_value(6.28), FadeOut(rad_title))
         rad_title = Text('6.28 radians (2π)', font='Segoe UI Light').scale(0.8).shift(
             3 * DOWN).set_color(
-            "#404040")
+            ANIM_BLACK)
         self.play(FadeIn(rad_title))
         self.wait(2)
 

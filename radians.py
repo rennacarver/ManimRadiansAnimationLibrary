@@ -77,7 +77,7 @@ class Timer():
 
 class DashedCircles(Scene):
     def construct(self):
-        radius_tracker = ValueTracker(0.925)
+        radius_tracker = ValueTracker(1.5)
         angle_tracker = ValueTracker(40 * DEGREES)
 
         circle = Circle(radius=radius_tracker.get_value(), color=ANIM_BLACK).add_updater(
@@ -88,11 +88,13 @@ class DashedCircles(Scene):
 
         timer = Timer.create_timer()
 
+        dashes = self.get_dashes(circle)
+
         self.add(get_background())
 
-        self.add(circle, vec, timer[1], timer[0][0])
-        Timer.animate(self, timer)
-        self.wait(0.5)
+        self.add(timer[1], timer[0][0], circle, dashes)
+        #Timer.animate(self, timer)
+        #self.wait(0.5)
 
     def get_arrow(self, circle, angle_tracker=None, radius_tracker=None):
         global radius, r
@@ -125,6 +127,36 @@ class DashedCircles(Scene):
             )
 
         return arrow
+
+    def get_dashes(self, circle, offset1=0.05, offset2=0.06):
+        p = circle.get_center()
+        r = circle.radius
+        r -= offset1
+        
+        dashes = VGroup()
+
+        thick_angles = [0, 90, 180, 270]
+        middle_angles = range(0, 360, 10)
+
+        for i in range(0, 360):
+            a = i * DEGREES
+            thick = int(i in thick_angles)
+            middle = int(i in middle_angles)
+
+            if thick:
+                r -= offset2
+            
+            elif middle:
+                r -= offset2 / 2
+
+            dash = Line(stroke_width=1 + max(thick*1.5, middle/2), color=ANIM_BLACK, z_index=-10)
+            dash.set_length(0.07 + max(0.18*thick, 0.1*middle)).rotate(a)
+            dash.move_to((p[0] + np.cos(a) * r, p[1] + np.sin(a) * r, 0))
+            dashes.add(dash)
+
+            r = circle.radius - offset1
+
+        return dashes
 
 class BigGridCompasses(Scene):
     def construct(self):

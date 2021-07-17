@@ -160,12 +160,12 @@ class DashedCircles(Scene):
         
         self.add(get_background())
 
-        radius_tracker.set_value(1.5)
-        vec.update()
-        circle.update()
-        angle_label.update()
-        self.add(circle, dashes, labels, angle_label, vec)
-        angle_label.clear_updaters()
+        # radius_tracker.set_value(1.5)
+        # vec.update()
+        # circle.update()
+        # angle_label.update()
+        # self.add(circle, dashes, labels, angle_label, vec)
+        # angle_label.clear_updaters()
 
         self.add(circle, dasher)
         self.wait(0.5)
@@ -220,7 +220,7 @@ class DashedCircles(Scene):
         self.play(ReplacementTransform(labels2, tmp_label), ReplacementTransform(tmp_ang_l, tmp_ang_label), run_time=1.5)
         self.wait(0.5)
 
-        tmp_label = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value())), call_updater=True)
+        tmp_label = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value(), 360)), call_updater=True)
 
         labels_r.shift(RIGHT*4.5)
         labels_l.shift(LEFT*4.5)

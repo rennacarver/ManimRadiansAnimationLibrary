@@ -65,15 +65,15 @@ class Timer():
         def get_number(dt):
             global time_passed
             index = min(int(time_passed), len(numbers) - 1)
-            time_passed += dt 
+            time_passed += dt
 
             return numbers[index]
 
         numbers[0].add_updater(lambda m, dt: m.become(get_number(dt)))
         renderer.play(Uncreate(circle, rate_func=lambda t: 1-t), run_time=5)
         numbers[0].clear_updaters()
-        numbers[0].become(numbers[-1])   
-        renderer.play(FadeOut(numbers[0]), run_time=0.5) 
+        numbers[0].become(numbers[-1])
+        renderer.play(FadeOut(numbers[0]), run_time=0.5)
 
 class DashedCircles(Scene):
     def construct(self):
@@ -111,7 +111,7 @@ class DashedCircles(Scene):
         a = angle_tracker.get_value
 
         arrow = Arrow(
-            start=p, 
+            start=p,
             end=(p[0] + np.cos(angle)*radius, p[1] + np.sin(angle)*radius, 0),
             color=ANIM_ORANGE,
             tip_length=0.2,
@@ -119,7 +119,7 @@ class DashedCircles(Scene):
 
         arrow.add_updater(lambda m: m.become(
             Arrow(
-            start=p, 
+            start=p,
             end=(p[0] + np.cos(a())*r(), p[1] + np.sin(a())*r(), 0),
             color=ANIM_ORANGE,
             tip_length=0.2,
@@ -194,12 +194,12 @@ class BigGridCompasses(Scene):
 
         circle = Circle(radius=radius, color=ANIM_BLACK, fill_opacity=1).move_to(RIGHT*4)
         outer_circle = Circle(radius=radius, color=ANIM_BLACK).move_to(RIGHT*4)
-        
+
         tracker = ValueTracker(PI/2)
 
         vec = Arrow(start=RIGHT*4, end=(4 + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE, buff=0)
 
-        rectangle = Rectangle(height=buff*12.5, width=buff*16.5, color=ANIM_BLACK, fill_opacity=1, z_index=0).shift(shift_factor)        
+        rectangle = Rectangle(height=buff*12.5, width=buff*16.5, color=ANIM_BLACK, fill_opacity=1, z_index=0).shift(shift_factor)
 
         grid_copy = grid.copy().shift(shift_factor)
 
@@ -212,7 +212,7 @@ class BigGridCompasses(Scene):
         #self.add(grid, red_dot, green_dot, panama, rotterdam)
 
         self.add(get_background())
-        
+
         self.play(Create(vertical_lines), Create(horizontal_lines), run_time=3)
         self.wait(0.5)
         self.play(Create(red_dot), run_time=0.5)
@@ -240,7 +240,7 @@ class BigGridCompasses(Scene):
             angle *= -1 if j else 1
             self.play(c.animate.rotate(angle), run_time=0.5)
             self.wait(0.3)
-        
+
         for j, c in enumerate(compasses[2:7]):
             initial_angle = -PI/4 - (PI/8) * (j+1)
             self.add(c.rotate(initial_angle))
@@ -336,7 +336,7 @@ class GridCompass(Scene):
             direction_to_use = direction_h if i % 2 == 0 else direction_v
 
             arrow = Arrow(*direction_to_use , tip_length=0.2, color=ANIM_ORANGE, z_index=100, buff=0).shift(shift_factor)
-            vectors.add(arrow)      
+            vectors.add(arrow)
 
         vectors.sort()
 
@@ -367,7 +367,7 @@ class Circles0to6Rad(Scene):
     def construct(self):
 
         tracker =  ValueTracker(0)
-        
+
         circle1 = self.get_circle_and_objs(8/4, 10, False, ORIGIN, tracker)
         circle2 = self.get_circle_and_objs(4.1/4, 5, False, (-4.5, 0, 0), tracker)
         circle3 = self.get_circle_and_objs(4.1/4, 5, True, (4.5, 0, 0), tracker)
@@ -375,21 +375,46 @@ class Circles0to6Rad(Scene):
         label_rad = Tex("radian", color=TEXT_COLOR)
 
         rad = Integer(1, color=TEXT_COLOR).next_to(label_rad, LEFT, 0.15).align_to(label_rad, DOWN)
-        
+
         group = VGroup(rad, label_rad).set_color(TEXT_COLOR).next_to(circle1[0], DOWN).add_updater(lambda m: m.become(
             VGroup(rad, label_rad).arrange(buff=0.2).set_color(TEXT_COLOR).next_to(circle1[0], DOWN)
         ))
 
         self.add(get_background())
 
-        self.add(circle1, circle2, circle3, group)
-        self.wait(0.5)
-        for i in range(1, 7):
-            self.play(tracker.animate.set_value(i))
-            self.wait(0.5)
+        #updates bottom title to plural or singular form depending on value
+        radtitle_value = 0
 
-        self.play(tracker.animate.set_value(6.28))
-        self.wait(0.5)
+        self.add(circle1, circle2, circle3)
+        rad_title = Text(str(radtitle_value) + ' radians', font='Segoe UI Light').scale(0.8).shift(
+            3 * DOWN).set_color(
+            ANIM_BLACK)
+        self.play(FadeIn(rad_title))
+        self.wait(2)
+        radtitle_value += 1
+
+        for i in range(1, 7):
+            if i == 1:
+                self.play(tracker.animate.set_value(i), FadeOut(rad_title))
+                rad_title = Text(str(radtitle_value) + ' radian', font='Segoe UI Light').scale(0.8).shift(
+                    3 * DOWN).set_color(
+                    ANIM_BLACK)
+                self.play(FadeIn(rad_title))
+            elif i > 1:
+                self.play(tracker.animate.set_value(i), FadeOut(rad_title))
+                rad_title = Text(str(radtitle_value) + ' radians', font='Segoe UI Light').scale(0.8).shift(
+                    3 * DOWN).set_color(
+                    ANIM_BLACK)
+                self.play(FadeIn(rad_title))
+            self.wait(2)
+            radtitle_value += 1
+
+        self.play(tracker.animate.set_value(6.28), FadeOut(rad_title))
+        rad_title = Text('6.28 radians (2π)', font='Segoe UI Light').scale(0.8).shift(
+            3 * DOWN).set_color(
+            ANIM_BLACK)
+        self.play(FadeIn(rad_title))
+        self.wait(2)
 
 
     def get_circle_and_objs(self, radius: float, label_radius: int, use_letters: bool, coords: np.array, tracker: ValueTracker):
@@ -412,14 +437,15 @@ class Circles0to6Rad(Scene):
                 text_rad =  DecimalNumber(tracker.get_value(), num_decimal_places=2).move_to(tmp_frac[1]).set_color(TEXT_COLOR)
 
                 return VGroup(tmp_frac[0], text_rad, tmp_frac[2])
-            
+
             tmp_frac = MathTex(theta, r"{", str(float(label_radius)), r"\over " + str(label_radius) + r"} \, = ")
-            
+
             text_distance = DecimalNumber(distance, num_decimal_places=1).move_to(tmp_frac[2])
 
             text_rad =  DecimalNumber(tracker.get_value(), num_decimal_places=2).next_to(tmp_frac, buff=0.2)
 
-            rad = Tex("rad", color=TEXT_COLOR).next_to(text_rad, buff=0.2)
+            # rad = Tex("rad", color=TEXT_COLOR).next_to(text_rad, buff=0.2)
+            rad = Tex("", color=TEXT_COLOR).next_to(text_rad, buff=0.2)
 
             return VGroup(tmp_frac[:2], text_distance, tmp_frac[3], text_rad, rad).set_color(TEXT_COLOR)
 
@@ -429,7 +455,7 @@ class Circles0to6Rad(Scene):
                 if float(get_distance()) <= label_radius:
                     label = MathTex("s")
                 else:
-                    label = VGroup(DecimalNumber(round(tracker.get_value(), 2), num_decimal_places=2), 
+                    label = VGroup(DecimalNumber(round(tracker.get_value(), 2), num_decimal_places=2),
                         Tex("r")).arrange(buff=0.15)
             else:
                 dist = float(get_distance())
@@ -467,7 +493,7 @@ class Circles0to6Rad(Scene):
                 if tracker.get_value() > 0.1 else Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords))
         )
 
-        label_rad = MathTex("R \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.5).next_to(fixed_segment, DOWN)
+        label_rad = MathTex("r \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.5).next_to(fixed_segment, DOWN)
 
         label_distance = get_distance_label().add_updater(lambda m: m.become(get_distance_label()))
 

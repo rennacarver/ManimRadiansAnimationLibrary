@@ -681,6 +681,7 @@ class Circles0to6Rad(Scene):
         ).set_opacity(1) if tracker.get_value() > 0.5 else lambda m: m.set_opacity(0))
 
         dot = Dot(circle.get_right(), color=ANIM_ORANGE)
+        center_dot = Dot(circle.get_center(), color=ANIM_ORANGE)
 
         arc_arrow = Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords).add_updater(
             lambda m: m.become(Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords).add_tip(tip_length=0.1)
@@ -695,6 +696,6 @@ class Circles0to6Rad(Scene):
             get_angle_label().set_color(ANIM_BLACK).scale(0.6).next_to(circle, UP, buff=0.6)
         ))
 
-        group = VGroup(circle, fixed_segment, rotating_segment, theta, dot, arc_arrow, label_rad, label_distance, angle_label)
+        group = VGroup(circle, fixed_segment, rotating_segment, theta, dot, center_dot, arc_arrow, label_rad, label_distance, angle_label)
 
         return group

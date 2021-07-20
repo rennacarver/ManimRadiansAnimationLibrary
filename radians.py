@@ -1,3 +1,4 @@
+import gc
 from re import M
 from manim import *
 
@@ -91,8 +92,21 @@ class Timer():
         numbers[0].become(numbers[-1])
         renderer.play(FadeOut(numbers[0]), run_time=0.5)
 
-class DashedCircles(Scene):
+class DashedCircles(ZoomedScene):
     #config.disable_caching = True
+    def __init__(self, **kwargs):
+            ZoomedScene.__init__(
+                self,
+                zoom_factor=0.3,
+                zoomed_display_height=2,
+                zoomed_display_width=3,
+                image_frame_stroke_width=20,
+                zoomed_camera_config={
+                    "default_frame_stroke_width": 3,
+                    },
+                **kwargs
+            )
+
     def construct(self):
         def show_dashes_and_labels(angle):
             angle_int = int(angle)
@@ -109,6 +123,11 @@ class DashedCircles(Scene):
             if angles_to_show:
                 for i in angles_to_show:
                     self.add(dashes[i])
+
+        zoomed_camera = self.zoomed_camera
+        zoomed_display = self.zoomed_display
+        frame = zoomed_camera.frame
+        zoomed_display_frame = zoomed_display.display_frame
 
         radius_tracker = ValueTracker(0.925)
         angle_tracker = ValueTracker(40)
@@ -134,8 +153,13 @@ class DashedCircles(Scene):
         timer = Timer.create_timer()
 
         angle_label = self.get_angle_label(vec, angle_tracker.get_value(), 360).add_updater(lambda m: m.become(
-            self.get_angle_label(vec, angle_tracker.get_value(), 360)
+            self.get_angle_label(vec, angle_tracker.get_value(), 360, m=m)
         ))
+
+        zd_rect = BackgroundRectangle(zoomed_display, fill_opacity=0, buff=MED_SMALL_BUFF)
+        self.add_foreground_mobject(zd_rect)
+
+        unfold_camera = UpdateFromFunc(zd_rect, lambda rect: rect.replace(zoomed_display))
 
         dasher = VMobject().add_updater(lambda m: show_dashes_and_labels(angle_tracker.get_value()))
         dasher.suspend_updating()
@@ -152,7 +176,7 @@ class DashedCircles(Scene):
         labels_l = labels2.copy()
         dashes_l = self.get_dashes(circle_l)
         vec_l = self.get_arrow(circle_l, angle_tracker)
-        angle_label_l = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value(), 400, False, 2, 1.3)), call_updater=True)
+        angle_label_l = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value(), 400, False, 2, 1.3, m=m)), call_updater=True)
 
         group_l = VGroup(circle_l, labels_l, vec_l, angle_label_l, dashes_l)
 
@@ -197,9 +221,20 @@ class DashedCircles(Scene):
 
         angle_tracker.set_value(40)
         angle_label.add_updater(lambda m: m.become(
-            self.get_angle_label(vec, angle_tracker.get_value(), 360, decimal_places=2, scaling=1.3)))
+            self.get_angle_label(vec, angle_tracker.get_value(), 360, decimal_places=2, scaling=1.3, m=m)))
+        
+        # Move zooming frame to the angle_label
+        frame.move_to(angle_label) 
+
+        self.play(Create(frame))
+        self.activate_zooming()
+        self.play(self.get_zoomed_display_pop_out_animation(), unfold_camera)
+        self.wait(0.5)
         self.play(angle_tracker.animate(rate_func=linear).set_value(39), run_time=2)
         self.play(angle_tracker.animate(rate_func=linear).set_value(40), run_time=2)
+        self.wait(0.5)
+        self.play(self.get_zoomed_display_pop_out_animation(), unfold_camera, rate_func=lambda t: smooth(1 - t))
+        self.play(Uncreate(zoomed_display_frame), FadeOut(frame))
         self.wait(0.5)
 
         objs_w_updaters = [vec_l, vec_r, angle_label_l, angle_label_r]
@@ -220,7 +255,7 @@ class DashedCircles(Scene):
         self.play(ReplacementTransform(labels2, tmp_label), ReplacementTransform(tmp_ang_l, tmp_ang_label), run_time=1.5)
         self.wait(0.5)
 
-        tmp_label = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value(), 360)), call_updater=True)
+        tmp_ang_label = VMobject().add_updater(lambda m, dt: m.become(self.get_angle_label(vec_l, angle_tracker.get_value(), 360, m=m)), call_updater=True)
 
         labels_r.shift(RIGHT*4.5)
         labels_l.shift(LEFT*4.5)
@@ -303,9 +338,9 @@ class DashedCircles(Scene):
 
         return labels_text
 
-    def get_angle_label(self, arrow, angle, max_angle, is_degree=True, decimal_places=0, scaling=1.2):
-        angle = angle % max_angle
+    def get_angle_label(self, arrow, angle, max_angle, is_degree=True, decimal_places=0, scaling=1.2, m=None):
         custom_angle = round(angle * max_angle / 360, decimal_places if decimal_places else None)
+        angle = angle % max_angle
         string = str(custom_angle)
         if is_degree:
             string += "°"
@@ -438,8 +473,6 @@ class BigGridCompasses(Scene):
         self.play(TransformMatchingShapes(circle, outer_circle))
         self.wait(0.5)
         vec.resume_updating()
-        self.wait(0.5)
-        self.play(tracker.animate.set_value(PI/4))
         self.wait(0.5)
         self.play(tracker.animate.set_value(36*DEGREES), ReplacementTransform(vector, final_vector))
         self.wait(0.5)
@@ -648,6 +681,7 @@ class Circles0to6Rad(Scene):
         ).set_opacity(1) if tracker.get_value() > 0.5 else lambda m: m.set_opacity(0))
 
         dot = Dot(circle.get_right(), color=ANIM_ORANGE)
+        center_dot = Dot(circle.get_center(), color=ANIM_ORANGE)
 
         arc_arrow = Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords).add_updater(
             lambda m: m.become(Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords).add_tip(tip_length=0.1)
@@ -662,6 +696,6 @@ class Circles0to6Rad(Scene):
             get_angle_label().set_color(ANIM_BLACK).scale(0.6).next_to(circle, UP, buff=0.6)
         ))
 
-        group = VGroup(circle, fixed_segment, rotating_segment, theta, dot, arc_arrow, label_rad, label_distance, angle_label)
+        group = VGroup(circle, fixed_segment, rotating_segment, theta, dot, center_dot, arc_arrow, label_rad, label_distance, angle_label)
 
         return group

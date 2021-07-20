@@ -225,7 +225,7 @@ class DashedCircles(ZoomedScene):
         
         # Move zooming frame to the angle_label
         frame.move_to(angle_label) 
-        
+
         self.play(Create(frame))
         self.activate_zooming()
         self.play(self.get_zoomed_display_pop_out_animation(), unfold_camera)
@@ -339,16 +339,13 @@ class DashedCircles(ZoomedScene):
         return labels_text
 
     def get_angle_label(self, arrow, angle, max_angle, is_degree=True, decimal_places=0, scaling=1.2, m=None):
-        angle = angle % max_angle
         custom_angle = round(angle * max_angle / 360, decimal_places if decimal_places else None)
+        angle = angle % max_angle
         string = str(custom_angle)
         if is_degree:
             string += "°"
         pos = arrow.copy().scale(scaling).get_end()
         label = Text(string, font="Segoe UI Light", color=ANIM_ORANGE, stroke_width=1).scale(0.2)
-        # if m:
-        #     del m
-        #     print(gc.collect())
         return label.move_to(pos)
 
 class BigGridCompasses(Scene):

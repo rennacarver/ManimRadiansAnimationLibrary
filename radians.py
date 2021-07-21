@@ -118,7 +118,9 @@ class RadianCircle():
             Angle(
                 fixed_segment, rotating_segment, radius=0.1 + 3 * SMALL_BUFF, other_angle=False
             ).point_from_proportion(0.5)
-        ).set_opacity(1) if tracker.get_value() > 0.5 else lambda m: m.set_opacity(0))
+        )if tracker.get_value() != 0 else lambda m: m)
+
+        theta.add_updater(lambda m: m.set_opacity(tracker.get_value()*2))
 
         dot = Dot(circle.get_right(), color=ANIM_ORANGE).add_updater(lambda m: m.move_to(circle.get_right()))
         center_dot = Dot(circle.get_center(), radius=DEFAULT_DOT_RADIUS/2, color=ANIM_ORANGE).add_updater(lambda m: m.move_to(center()))
@@ -128,7 +130,7 @@ class RadianCircle():
                 if tracker.get_value() > 0.1 else Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()))
         )
 
-        label_radius_tex = MathTex("r \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.5).add_updater(
+        label_radius_tex = MathTex("r \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.43).add_updater(
             lambda m, dt: m.next_to(fixed_segment, DOWN), call_updater=True
         )
 
@@ -214,10 +216,22 @@ class RadianExplanation101(Scene):
 
         circle_2 = RadianCircle.get_circle_and_objs(2, 10, False, RIGHT*1.5, angle_tracker_2, False, x_tracker_2)
 
+        circles = VGroup(circle_1, circle_2)
+
         timer = Timer.create_timer()
 
-        radian_arcs_1 = self.get_radian_arcs(1, (-2, 0, 0))
-        radian_arcs_2 = self.get_radian_arcs(2, (1.5, 0, 0), scale_factor=1.2)
+        arcs_1, labels_1 = self.get_radian_arcs(1, (-3, 0, 0))
+        arcs_2, labels_2 = self.get_radian_arcs(2, (2.5, 0, 0), scale_factor=1.2)
+
+        change_color = ANIM_AQUA
+
+        arcs_1_copy = arcs_1.copy().set_color(change_color)
+        arcs_2_copy = arcs_2.copy().set_color(change_color)
+
+        arcs_1_copy.z_index = 1000
+        arcs_2_copy.z_index = 1000
+
+        equation = MathTex(r"C\,=\,2\pi r\,=\, \pi d", color=ANIM_BLACK).scale(0.9).to_edge(DOWN, buff=0.8)
 
         self.add(get_background())
 
@@ -270,8 +284,8 @@ class RadianExplanation101(Scene):
         self.wait()
         self.play(angle_tracker_1.animate.set_value(1), angle_tracker_2.animate.set_value(1), run_time=1.5)
         # This is to increase render speed
-        for k in [*circle_1, *circle_2]:
-            k.suspend_updating()
+        circles.update()
+        circles.suspend_updating()
         self.wait()
         rad_title = Text('1 radian', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(ANIM_BLACK)
         self.play(FadeIn(rad_title))
@@ -279,23 +293,22 @@ class RadianExplanation101(Scene):
 
         for i in range(2, 4):
             # This is to increase render speed
-            for k in [*circle_1, *circle_2]:
-                k.resume_updating()
+            circles.resume_updating()
 
             self.play(angle_tracker_1.animate.set_value(i), angle_tracker_2.animate.set_value(i), FadeOut(rad_title))
             rad_title = Text(str(i) + ' radians', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(ANIM_BLACK)
             
             # This is to increase render speed
-            for k in [*circle_1, *circle_2]:
-                k.suspend_updating()
+            circles.update()
+            circles.suspend_updating()
 
             self.play(FadeIn(rad_title))
             self.wait(2)
 
         # This is to increase render speed
-        for i in [*circle_1, *circle_2]:
-            i.resume_updating()
+        circles.resume_updating()
 
+        circles.update()
         label_distance.suspend_updating()
         circle_2[-1].suspend_updating()
 
@@ -308,13 +321,46 @@ class RadianExplanation101(Scene):
         
         self.remove(label_distance, circle_2[-1])
         
-        for i in [*circle_1, *circle_2]:
-            i.suspend_updating()
+        circles.update()
+        circles.suspend_updating()
 
         self.play(FadeIn(timer[0][0], timer[1]))
         self.wait(0.5)
         Timer.animate(self, timer)
+        self.wait()
+
+        circles.resume_updating()
+
+        self.play(Write(equation), run_time=2)
+        self.wait()
+        self.play(x_tracker.animate.set_value(-3), x_tracker_2.animate.set_value(2.5), run_time=1.5)
+
+        circles.update()
+        circles.suspend_updating()
+
         self.wait(0.5)
+        w1 = arcs_1.width
+        w2 = arcs_2.width
+        arcs_1.scale_to_fit_width(2)
+        arcs_2.scale_to_fit_width(4)
+        self.add(arcs_1, arcs_2)
+        self.play(arcs_1.animate.scale_to_fit_width(w1), arcs_2.animate.scale_to_fit_width(w2),
+            FadeOut(arc_arrow, circle_2[6], theta, circle_2[3], label_radius_tex, circle_2[-2], run_time=0.5), run_time=2)
+        self.add(arc_arrow, circle_2[6], theta, circle_2[3])
+        angle_tracker_1.set_value(0)
+        angle_tracker_2.set_value(0)
+        circles.update()
+        self.play(FadeIn(labels_1, labels_2))
+        self.wait()
+        
+        for j, i in enumerate([*range(1, 7), 6.28]):
+            circles.resume_updating()
+            self.play(angle_tracker_1.animate.set_value(i), angle_tracker_2.animate.set_value(i), 
+                Create(arcs_1_copy[j]), Create(arcs_2_copy[j]), labels_1[j].animate.set_color(change_color),
+                labels_2[j].animate.set_color(change_color), run_time=1.5)
+            circles.update()
+            circles.suspend_updating()
+            self.wait()
 
     def get_radian_arcs(self, radius, center, scale_factor=1.4):
         def get_points(ang1, ang2):
@@ -333,13 +379,13 @@ class RadianExplanation101(Scene):
         labels = VGroup(
             *[
                 Text(str(i), font="Segoe UI Light", color=ANIM_ORANGE).scale(0.25).move_to(arcs[i-1].copy()
-                    .scale(2.5).point_from_proportion(0.5))
+                    .scale(5/radius).point_from_proportion(0.5))
                 for i in range(1, 7)
             ]
         )
 
         labels.add(Text(".28", font="Segoe UI Light", color=ANIM_ORANGE).scale(0.25).move_to(arcs[-1].copy()
-                    .scale(25).point_from_proportion(0.5)))
+                    .scale(50/radius).point_from_proportion(0.5)))
 
         return VGroup(arcs, labels)
 

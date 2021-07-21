@@ -1,8 +1,8 @@
-import gc
 from re import M
 from manim import *
+from numpy import fix
 
-#   for scene 'Circles0to6Rad' in manim CE v0.8.0
+#   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.8.0
 #   navigate to /manim/mobject/geometry.py
 #   comment out line 140 "self.reset_endpoints_based_on_top(tip, at_start)"
 
@@ -39,10 +39,118 @@ def get_background():
             fill_opacity=1, z_index=-1000)
     return background
 
+class RadianCircle():
+    @classmethod
+    def get_circle_and_objs(
+        self,
+        radius: float, 
+        label_radius: int,
+        use_letters: bool,
+        coords: np.array,
+        tracker: ValueTracker,
+        show_angle_label: bool = True,
+        x_tracker: ValueTracker = None
+        ):
+        """Returns the circle, labels & curved arrow"""
+
+        def get_distance():
+            return str(round(label_radius * tracker.get_value(), 1))
+
+        def get_angle_label():
+            theta = r"\theta \, = \, "
+
+            distance = float(get_distance())
+
+            if use_letters:
+                if distance <= label_radius:
+                    return MathTex(theta + r"\frac{s}{r}").set_color(TEXT_COLOR)
+
+                tmp_frac = MathTex(theta + r"{", "6.28", r"r \over r}").set_color(TEXT_COLOR)
+
+                text_rad =  DecimalNumber(tracker.get_value(), num_decimal_places=2).move_to(tmp_frac[1]).set_color(TEXT_COLOR)
+
+                return VGroup(tmp_frac[0], text_rad, tmp_frac[2])
+
+            tmp_frac = MathTex(theta, r"{", str(float(label_radius)), r"\over " + str(label_radius) + r"} \, = ")
+
+            text_distance = DecimalNumber(distance, num_decimal_places=1).move_to(tmp_frac[2])
+
+            text_rad =  DecimalNumber(tracker.get_value(), num_decimal_places=2).next_to(tmp_frac, buff=0.2)
+
+            return VGroup(tmp_frac[:2], text_distance, tmp_frac[3], text_rad).set_color(TEXT_COLOR)
+
+        def get_distance_label():
+            label = None
+            if use_letters:
+                if float(get_distance()) <= label_radius:
+                    label = MathTex("s")
+                else:
+                    label = VGroup(DecimalNumber(round(tracker.get_value(), 2), num_decimal_places=2),
+                        Tex("r")).arrange(buff=0.15)
+            else:
+                dist = float(get_distance())
+                label = DecimalNumber(dist, num_decimal_places=1)
+
+            label.scale(0.5).set_color(ANIM_ORANGE)
+            label.move_to(Arc(radius=radius+0.3, angle=tracker.get_value(), arc_center=center()).point_from_proportion(0.5))
+
+            return label if tracker.get_value() > 0.5 else VMobject()
+
+        center = (lambda: coords) if x_tracker is None else (lambda: (x_tracker.get_value(), 0, 0))
+
+        initial_angle = tracker.get_value()
+
+        circle = Circle(radius=radius, color=ANIM_BLACK, stroke_width=3).move_to(center()).add_updater(
+            lambda m: m.move_to(center())
+        )
+
+        fixed_segment = Line(start=center(), end=circle.get_right(), color=ANIM_ORANGE).add_updater(
+            lambda m: m.become(Line(start=center(), end=circle.get_right(), color=ANIM_ORANGE))
+        )
+
+        rotating_segment = Line(start=center(), end=(center()[0] + np.cos(initial_angle)*radius, center()[1] + np.sin(initial_angle)*radius, 0), color=ANIM_ORANGE).add_updater(
+            lambda m: m.become(Line(start=center(), end=(center()[0] + np.cos(tracker.get_value())*radius, center()[1] + np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE))
+        )
+
+        theta = MathTex(r"\theta", color=ANIM_ORANGE).scale(0.5).move_to(circle.get_right())
+
+        theta.add_updater(lambda m: m.move_to(
+            Angle(
+                fixed_segment, rotating_segment, radius=0.1 + 3 * SMALL_BUFF, other_angle=False
+            ).point_from_proportion(0.5)
+        ).set_opacity(1) if tracker.get_value() > 0.5 else lambda m: m.set_opacity(0))
+
+        dot = Dot(circle.get_right(), color=ANIM_ORANGE).add_updater(lambda m: m.move_to(circle.get_right()))
+        center_dot = Dot(circle.get_center(), radius=DEFAULT_DOT_RADIUS/2, color=ANIM_ORANGE).add_updater(lambda m: m.move_to(center()))
+
+        arc_arrow = Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_updater(
+            lambda m: m.become(Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_tip(tip_length=0.1)
+                if tracker.get_value() > 0.1 else Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()))
+        )
+
+        label_radius_tex = MathTex("r \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.5).add_updater(
+            lambda m, dt: m.next_to(fixed_segment, DOWN), call_updater=True
+        )
+
+        label_distance = get_distance_label().add_updater(lambda m: m.become(get_distance_label()))
+
+        group = VGroup(circle, fixed_segment, rotating_segment, theta, dot, center_dot, arc_arrow, label_radius_tex, label_distance)
+
+        if not show_angle_label:
+            return group
+
+        angle_label = get_angle_label().set_color(ANIM_BLACK).scale(0.6).next_to(circle, UP, buff=0.6).add_updater(lambda m: m.become(
+            get_angle_label().set_color(ANIM_BLACK).scale(0.6).next_to(circle, UP, buff=0.6)
+        ))
+
+        group.add(angle_label)        
+
+        return group
+
 class Compass():
     @classmethod
     def create_compass(self, labels=None, coords=ORIGIN, rotation=0):
-        arrows = VGroup(*[DoubleArrow(start=LEFT*1.2, end=RIGHT*1.2, tip_length=.2, color=ANIM_BLACK, stroke_width=6, z_index=-10).rotate(PI/2 if i else 0) for i in range(2)])
+        arrows = VGroup(*[DoubleArrow(start=LEFT*1.3, end=RIGHT*1.35, tip_length=.2, color=ANIM_BLACK, stroke_width=6, z_index=-10).rotate(PI/2 if i else 0) for i in range(2)])
         arrows.move_to(coords)
         for a in arrows:
             for tip in a.get_tips():
@@ -91,6 +199,162 @@ class Timer():
         numbers[0].clear_updaters()
         numbers[0].become(numbers[-1])
         renderer.play(FadeOut(numbers[0]), run_time=0.5)
+
+class RadianExplanation101(Scene):
+    #config.disable_caching = True
+    def construct(self):
+        
+        angle_tracker_1 = ValueTracker(0)
+        angle_tracker_2 = ValueTracker(1)
+
+        x_tracker = ValueTracker(0)
+        x_tracker_2 = ValueTracker(1.5)
+
+        circle_1 = RadianCircle.get_circle_and_objs(1, 5, False, LEFT*1.1, angle_tracker_1, False, x_tracker)
+
+        circle_2 = RadianCircle.get_circle_and_objs(2, 10, False, RIGHT*1.5, angle_tracker_2, False, x_tracker_2)
+
+        timer = Timer.create_timer()
+
+        radian_arcs_1 = self.get_radian_arcs(1, (-2, 0, 0))
+        radian_arcs_2 = self.get_radian_arcs(2, (1.5, 0, 0), scale_factor=1.2)
+
+        self.add(get_background())
+
+        circle, fixed_segment, rotating_segment, theta, dot, center_dot, arc_arrow, label_radius_tex, label_distance = circle_1
+
+        circle.suspend_updating()
+
+        self.play(FadeIn(circle))
+        circle.resume_updating()
+        self.wait(0.5)
+
+        dot.suspend_updating()
+        arc_arrow.suspend_updating()
+
+        self.play(FadeIn(dot, arc_arrow), run_time=0.7)
+        arc_arrow.resume_updating()
+        self.play(angle_tracker_1.animate.set_value(1), run_time=4)
+        self.wait(0.5)
+
+        for i in [rotating_segment, fixed_segment, center_dot, theta, *circle_2[1:]]:
+            i.update()
+            i.set_opacity(0)
+            self.add(i)
+            i.suspend_updating()
+
+        self.play(VGroup(center_dot, fixed_segment, theta, rotating_segment).animate.set_opacity(1))
+
+        for i in circle_1[:-2]:
+            i.resume_updating()
+
+        self.wait(0.5)
+        self.play(x_tracker.animate.set_value(-2), FadeIn(circle_2[0].scale(0.5)))
+        self.wait(0.5)
+        self.play(circle_2[0].animate.scale(2))
+
+        for i in [label_distance, label_radius_tex]:
+            i.update()
+            i.set_opacity(0)
+            self.add(i)
+            i.suspend_updating()
+
+        self.play(VGroup(label_radius_tex, label_distance, *circle_2[1:6], *circle_2[6:]).animate.set_opacity(1),
+            circle_2[6].animate.set_stroke(opacity=1))
+
+        for i in [label_distance, label_radius_tex, *circle_2[1:]]:
+            i.resume_updating()
+
+        self.wait()
+        self.play(angle_tracker_1.animate.set_value(4), angle_tracker_2.animate.set_value(2), run_time=2.5)
+        self.wait()
+        self.play(angle_tracker_1.animate.set_value(1), angle_tracker_2.animate.set_value(1), run_time=1.5)
+        # This is to increase render speed
+        for k in [*circle_1, *circle_2]:
+            k.suspend_updating()
+        self.wait()
+        rad_title = Text('1 radian', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(ANIM_BLACK)
+        self.play(FadeIn(rad_title))
+        self.wait(2)
+
+        for i in range(2, 4):
+            # This is to increase render speed
+            for k in [*circle_1, *circle_2]:
+                k.resume_updating()
+
+            self.play(angle_tracker_1.animate.set_value(i), angle_tracker_2.animate.set_value(i), FadeOut(rad_title))
+            rad_title = Text(str(i) + ' radians', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(ANIM_BLACK)
+            
+            # This is to increase render speed
+            for k in [*circle_1, *circle_2]:
+                k.suspend_updating()
+
+            self.play(FadeIn(rad_title))
+            self.wait(2)
+
+        # This is to increase render speed
+        for i in [*circle_1, *circle_2]:
+            i.resume_updating()
+
+        label_distance.suspend_updating()
+        circle_2[-1].suspend_updating()
+
+        self.play(
+            VGroup(label_distance, circle_2[-1]).animate(run_time=0.5).set_opacity(0),
+            angle_tracker_1.animate.set_value(6.28),
+            angle_tracker_2.animate.set_value(6.28),
+            FadeOut(rad_title),
+            run_time=2.5)
+        
+        self.remove(label_distance, circle_2[-1])
+        
+        for i in [*circle_1, *circle_2]:
+            i.suspend_updating()
+
+        self.play(FadeIn(timer[0][0], timer[1]))
+        self.wait(0.5)
+        Timer.animate(self, timer)
+        self.wait(0.5)
+
+    def get_radian_arcs(self, radius, center, scale_factor=1.4):
+        def get_points(ang1, ang2):
+            return [
+                (x + np.cos(ang1) * radius, y + np.sin(ang1) * radius, 0),
+                (x + np.cos(ang2-0.1) * radius, y + np.sin(ang2-0.1) * radius, 0)
+            ]
+
+        radius *= scale_factor
+
+        x, y = center[:2]
+
+        arcs = VGroup(*[ArcBetweenPoints(*get_points(i, i+1), angle=0.9, color=ANIM_ORANGE) for i in range(6)])
+        arcs.add(ArcBetweenPoints(*get_points(6, 6.28), angle=0.18, color=ANIM_ORANGE))
+
+        labels = VGroup(
+            *[
+                Text(str(i), font="Segoe UI Light", color=ANIM_ORANGE).scale(0.25).move_to(arcs[i-1].copy()
+                    .scale(2.5).point_from_proportion(0.5))
+                for i in range(1, 7)
+            ]
+        )
+
+        labels.add(Text(".28", font="Segoe UI Light", color=ANIM_ORANGE).scale(0.25).move_to(arcs[-1].copy()
+                    .scale(25).point_from_proportion(0.5)))
+
+        return VGroup(arcs, labels)
+
+class RadianWarning(Scene):
+    def construct(self):
+
+        scale_factor = 0.4
+        warning = Text("Warning:", font="Segoe UI Light", color="#FF0000").scale(scale_factor)
+        rads = Text("Radians Are Counter-Intuitive", font="Segoe UI Light", color="#FF0000").scale(scale_factor)
+
+        group = VGroup(warning, rads).arrange(DOWN, buff=0.1).center()
+        
+        self.add(get_background())
+        self.play(GrowFromCenter(group))
+        self.wait(0.5)
 
 class DashedCircles(ZoomedScene):
     #config.disable_caching = True
@@ -562,9 +826,9 @@ class Circles0to6Rad(Scene):
 
         tracker =  ValueTracker(0)
 
-        circle1 = self.get_circle_and_objs(8/4, 10, False, ORIGIN, tracker)
-        circle2 = self.get_circle_and_objs(4.1/4, 5, False, (-4.5, 0, 0), tracker)
-        circle3 = self.get_circle_and_objs(4.1/4, 5, True, (4.5, 0, 0), tracker)
+        circle1 = RadianCircle.get_circle_and_objs(8/4, 10, False, ORIGIN, tracker)
+        circle2 = RadianCircle.get_circle_and_objs(4.1/4, 5, False, (-4.5, 0, 0), tracker)
+        circle3 = RadianCircle.get_circle_and_objs(4.1/4, 5, True, (4.5, 0, 0), tracker)
 
         label_rad = Tex("radian", color=TEXT_COLOR)
 
@@ -609,93 +873,3 @@ class Circles0to6Rad(Scene):
             ANIM_BLACK)
         self.play(FadeIn(rad_title))
         self.wait(2)
-
-
-    def get_circle_and_objs(self, radius: float, label_radius: int, use_letters: bool, coords: np.array, tracker: ValueTracker):
-        """Returns the circle, labels & curved arrow"""
-
-        def get_distance():
-            return str(round(label_radius * tracker.get_value(), 1))
-
-        def get_angle_label():
-            theta = r"\theta \, = \, "
-
-            distance = float(get_distance())
-
-            if use_letters:
-                if distance <= label_radius:
-                    return MathTex(theta + r"\frac{s}{r}").set_color(TEXT_COLOR)
-
-                tmp_frac = MathTex(theta + r"{", "6.28", r"r \over r}").set_color(TEXT_COLOR)
-
-                text_rad =  DecimalNumber(tracker.get_value(), num_decimal_places=2).move_to(tmp_frac[1]).set_color(TEXT_COLOR)
-
-                return VGroup(tmp_frac[0], text_rad, tmp_frac[2])
-
-            tmp_frac = MathTex(theta, r"{", str(float(label_radius)), r"\over " + str(label_radius) + r"} \, = ")
-
-            text_distance = DecimalNumber(distance, num_decimal_places=1).move_to(tmp_frac[2])
-
-            text_rad =  DecimalNumber(tracker.get_value(), num_decimal_places=2).next_to(tmp_frac, buff=0.2)
-
-            # rad = Tex("rad", color=TEXT_COLOR).next_to(text_rad, buff=0.2)
-            rad = Tex("", color=TEXT_COLOR).next_to(text_rad, buff=0.2)
-
-            return VGroup(tmp_frac[:2], text_distance, tmp_frac[3], text_rad, rad).set_color(TEXT_COLOR)
-
-        def get_distance_label():
-            label = None
-            if use_letters:
-                if float(get_distance()) <= label_radius:
-                    label = MathTex("s")
-                else:
-                    label = VGroup(DecimalNumber(round(tracker.get_value(), 2), num_decimal_places=2),
-                        Tex("r")).arrange(buff=0.15)
-            else:
-                dist = float(get_distance())
-                label = DecimalNumber(dist, num_decimal_places=1)
-
-            label.scale(0.5).set_color(ANIM_ORANGE)
-            label.move_to(Arc(radius=radius+0.3, angle=tracker.get_value(), arc_center=coords).point_from_proportion(0.5))
-
-            return label
-
-        initial_angle = tracker.get_value()
-
-        circle = Circle(radius=radius, color=ANIM_BLACK, stroke_width=3).move_to(coords)
-
-        fixed_segment = Line(start=coords, end=circle.get_right(), color=ANIM_ORANGE)
-
-        rotating_segment = Line(start=coords, end=(coords[0] + np.cos(initial_angle)*radius, coords[1] + np.sin(initial_angle)*radius, 0), color=ANIM_ORANGE).add_updater(
-            lambda m: m.become(Line(start=coords, end=(coords[0] + np.cos(tracker.get_value())*radius, coords[1] + np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE))
-        )
-
-        theta = MathTex(r"\theta", color=ANIM_ORANGE).scale(0.5).move_to(
-            circle.get_right()
-        )
-
-        theta.add_updater(lambda m: m.move_to(
-            Angle(
-                fixed_segment, rotating_segment, radius=0.1 + 3 * SMALL_BUFF, other_angle=False
-            ).point_from_proportion(0.5)
-        ).set_opacity(1) if tracker.get_value() > 0.5 else lambda m: m.set_opacity(0))
-
-        dot = Dot(circle.get_right(), color=ANIM_ORANGE)
-        center_dot = Dot(circle.get_center(), color=ANIM_ORANGE)
-
-        arc_arrow = Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords).add_updater(
-            lambda m: m.become(Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords).add_tip(tip_length=0.1)
-                if tracker.get_value() > 0.1 else Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=coords))
-        )
-
-        label_rad = MathTex("r \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.5).next_to(fixed_segment, DOWN)
-
-        label_distance = get_distance_label().add_updater(lambda m: m.become(get_distance_label()))
-
-        angle_label = get_angle_label().set_color(ANIM_BLACK).scale(0.6).next_to(circle, UP, buff=0.6).add_updater(lambda m: m.become(
-            get_angle_label().set_color(ANIM_BLACK).scale(0.6).next_to(circle, UP, buff=0.6)
-        ))
-
-        group = VGroup(circle, fixed_segment, rotating_segment, theta, dot, center_dot, arc_arrow, label_rad, label_distance, angle_label)
-
-        return group

@@ -1,4 +1,4 @@
-from re import M
+from re import M, template
 from manim import *
 from numpy import fix
 
@@ -49,7 +49,9 @@ class RadianCircle():
         coords: np.array,
         tracker: ValueTracker,
         show_angle_label: bool = True,
-        x_tracker: ValueTracker = None
+        x_tracker: ValueTracker = None,
+        simplified: bool = False,
+        segment_color: str = ANIM_ORANGE
         ):
         """Returns the circle, labels & curved arrow"""
 
@@ -104,13 +106,16 @@ class RadianCircle():
             lambda m: m.move_to(center())
         )
 
-        fixed_segment = Line(start=center(), end=circle.get_right(), color=ANIM_ORANGE).add_updater(
-            lambda m: m.become(Line(start=center(), end=circle.get_right(), color=ANIM_ORANGE))
+        fixed_segment = Line(start=center(), end=circle.get_right(), color=segment_color).add_updater(
+            lambda m: m.become(Line(start=center(), end=circle.get_right(), color=segment_color))
         )
 
-        rotating_segment = Line(start=center(), end=(center()[0] + np.cos(initial_angle)*radius, center()[1] + np.sin(initial_angle)*radius, 0), color=ANIM_ORANGE).add_updater(
-            lambda m: m.become(Line(start=center(), end=(center()[0] + np.cos(tracker.get_value())*radius, center()[1] + np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE))
+        rotating_segment = Line(start=center(), end=(center()[0] + np.cos(initial_angle)*radius, center()[1] + np.sin(initial_angle)*radius, 0), color=segment_color).add_updater(
+            lambda m: m.become(Line(start=center(), end=(center()[0] + np.cos(tracker.get_value())*radius, center()[1] + np.sin(tracker.get_value())*radius, 0), color=segment_color))
         )
+
+        if simplified:
+            return VGroup(circle, fixed_segment, rotating_segment)
 
         theta = MathTex(r"\theta", color=ANIM_ORANGE).scale(0.5).move_to(circle.get_right())
 
@@ -201,6 +206,121 @@ class Timer():
         numbers[0].clear_updaters()
         numbers[0].become(numbers[-1])
         renderer.play(FadeOut(numbers[0]), run_time=0.5)
+
+class TicksAndLabelsFromCircle():
+    @classmethod
+    def create_ticks_and_labels(self, circle, label_angles, inner_labels, outer_labels, full_turn_labels, scale_factor=0.4):
+        p = circle.get_center()
+        r = circle.radius - 0.06
+        
+        ticks = VGroup()
+        inner_labels_tex = VGroup()
+        outer_labels_tex = VGroup()
+
+        for i, (a, inner, outer) in enumerate(zip(label_angles, inner_labels, outer_labels)):
+            tick = Line(stroke_width=2, color=ANIM_BLACK)
+            tick.set_length(0.15).rotate(a)
+            tick.move_to((p[0] + np.cos(a) * r, p[1] + np.sin(a) * r, 0))
+            ticks.add(tick)
+
+            inner_label = MathTex(inner, tex_template=segoe_template, color=ANIM_BLACK).scale(scale_factor)
+            direction = DOWN*round(np.sin(a), 10)+LEFT*round(np.cos(a), 10)
+            inner_label.next_to(tick.get_start(), direction, aligned_edge=direction, buff=0.23)
+            inner_labels_tex.add(inner_label)
+
+            outer_label = MathTex(outer, tex_template=segoe_template, color=ANIM_BLACK).scale(scale_factor)
+            direction = UP*round(np.sin(a), 10)+RIGHT*round(np.cos(a), 10)
+            outer_label.next_to(tick, direction, aligned_edge=ORIGIN, buff=0.1)
+            outer_labels_tex.add(outer_label)
+        
+        inner_full_turn, outer_full_turn = [MathTex(i, tex_template=segoe_template, color=ANIM_BLACK).scale(scale_factor) for i in full_turn_labels]
+
+        inner_full_turn.next_to(inner_labels_tex[0], DOWN, buff=0.1).align_to(inner_labels_tex[0], RIGHT)
+        outer_full_turn.next_to(outer_labels_tex[0], DOWN, buff=0.1).align_to(outer_labels_tex[0], LEFT)
+
+        VGroup(inner_full_turn, inner_labels_tex[0]).next_to(ticks[0], LEFT, buff=0.15)
+        VGroup(outer_full_turn, outer_labels_tex[0]).next_to(ticks[0], RIGHT, buff=0.15)
+
+        inner_labels_tex.add(inner_full_turn)
+        outer_labels_tex.add(outer_full_turn)
+
+        return (ticks, inner_labels_tex, outer_labels_tex)
+
+class RadianDegreeConversion(Scene):
+    def construct(self):
+        
+        radian_values = [PI/4, PI/2, 3*PI/4, PI, 5*PI/4, 3*PI/2, 7*PI/4, 2*PI]
+
+        radian_labels = [r"\pi/4", r"\pi/2", r"3\pi/4", r"\pi", r"5\pi/4", r"3\pi/2", r"7\pi/4", r"2\pi"]
+        
+        outer_labels_str = [r"0\,rad"]
+
+        for label, value in zip(radian_labels, radian_values):
+            outer_labels_str.append(label + r"\,=\," + str(round(value, 4)) + r"\,rad")
+
+        circle = Circle(2, color=ANIM_BLACK)
+        circle2 = Circle(circle.copy().scale(0.7).width/2, color=ANIM_BLACK).shift(RIGHT*2.5)
+
+        d_ticks, d_inner_labels, d_outer_labels = TicksAndLabelsFromCircle.create_ticks_and_labels(
+            circle=circle,
+            label_angles=[i*DEGREES for i in range(0, 360, 45)],
+            inner_labels=[str(i) + "°" for i in range(0, 360, 45)],
+            outer_labels=outer_labels_str[:-1],
+            full_turn_labels=("360°", outer_labels_str[-1])
+        )
+
+        outer_labels_deg_str = [str(round(np.rad2deg(i), 4)) + "°" for i in range(7)]
+        outer_labels_deg_str[0] = "0°"
+        outer_labels_deg_str.append("360°")
+
+        r_ticks, r_inner_labels, r_outer_labels = TicksAndLabelsFromCircle.create_ticks_and_labels(
+            circle=circle2,
+            label_angles=range(7),
+            inner_labels=[str(i) + r"\,rad" for i in range(7)],
+            outer_labels=outer_labels_deg_str[:-1],
+            full_turn_labels=(r"6.2832\,rad", outer_labels_deg_str[-1]),
+            scale_factor=0.4*0.7
+        )
+
+        timer_1 = Timer.create_timer()
+        timer_2 = Timer.create_timer()
+
+        self.add(get_background())
+        self.play(Create(circle), run_time=1.5)
+        self.wait(0.5)
+        for t, l in zip(d_ticks, d_inner_labels):
+            self.play(Write(VGroup(t, l)), run_time=0.7)
+            self.wait(0.7)
+        self.play(Write(d_inner_labels[-1]), run_time=0.7)
+        self.wait()
+        self.play(Write(d_outer_labels[0]), run_time=1.5)
+        self.wait()
+        self.play(FadeIn(timer_1[0][0], timer_1[1]))
+        self.wait(0.5)
+        Timer.animate(self, timer_1)
+        self.wait(0.5)
+        for l in d_outer_labels[1:]:
+            self.play(FadeIn(l), run_time=0.7)
+            self.wait(0.4)
+        self.wait()
+        self.play(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels).animate.scale(0.7).shift(LEFT*2.5),
+            Create(circle2, run_time=1.5))
+        self.wait()
+        for t, l in zip(r_ticks, r_inner_labels):
+            self.play(Write(VGroup(t, l)), run_time=0.7)
+            self.wait(0.7)
+        self.play(Write(r_inner_labels[-1]), run_time=0.7)
+        self.wait()
+        self.play(Write(VGroup(r_outer_labels[0], r_outer_labels[-1])), run_time=1.5)
+        self.wait()
+        self.play(FadeIn(timer_2[0][0], timer_2[1]))
+        self.wait(0.5)
+        Timer.animate(self, timer_2)
+        self.wait(0.5)
+        for l in r_outer_labels[1:-1]:
+            self.play(FadeIn(l), run_time=0.7)
+            self.wait(0.4)
+        self.wait()
 
 class RadianExplanation101(Scene):
     #config.disable_caching = True

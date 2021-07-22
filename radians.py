@@ -1,6 +1,6 @@
-from re import M, template
+from re import template
 from manim import *
-from numpy import fix
+
 
 #   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.8.0
 #   navigate to /manim/mobject/geometry.py
@@ -43,15 +43,16 @@ class RadianCircle():
     @classmethod
     def get_circle_and_objs(
         self,
-        radius: float, 
-        label_radius: int,
-        use_letters: bool,
-        coords: np.array,
-        tracker: ValueTracker,
+        radius: float = 1, 
+        label_radius: int = 1,
+        use_letters: bool = False,
+        coords: np.array = ORIGIN,
+        tracker: ValueTracker = ValueTracker(0),
         show_angle_label: bool = True,
         x_tracker: ValueTracker = None,
         simplified: bool = False,
-        segment_color: str = ANIM_ORANGE
+        segment_color: str = ANIM_ORANGE,
+        circle_stroke_width: float = 3
         ):
         """Returns the circle, labels & curved arrow"""
 
@@ -102,7 +103,7 @@ class RadianCircle():
 
         initial_angle = tracker.get_value()
 
-        circle = Circle(radius=radius, color=ANIM_BLACK, stroke_width=3).move_to(center()).add_updater(
+        circle = Circle(radius=radius, color=ANIM_BLACK, stroke_width=circle_stroke_width).move_to(center()).add_updater(
             lambda m: m.move_to(center())
         )
 
@@ -114,8 +115,10 @@ class RadianCircle():
             lambda m: m.become(Line(start=center(), end=(center()[0] + np.cos(tracker.get_value())*radius, center()[1] + np.sin(tracker.get_value())*radius, 0), color=segment_color))
         )
 
+        center_dot = Dot(circle.get_center(), radius=DEFAULT_DOT_RADIUS/2, color=segment_color).add_updater(lambda m: m.move_to(center()))
+
         if simplified:
-            return VGroup(circle, fixed_segment, rotating_segment)
+            return VGroup(circle, fixed_segment, rotating_segment, center_dot)
 
         theta = MathTex(r"\theta", color=ANIM_ORANGE).scale(0.5).move_to(circle.get_right())
 
@@ -128,7 +131,6 @@ class RadianCircle():
         theta.add_updater(lambda m: m.set_opacity(tracker.get_value()*2))
 
         dot = Dot(circle.get_right(), color=ANIM_ORANGE).add_updater(lambda m: m.move_to(circle.get_right()))
-        center_dot = Dot(circle.get_center(), radius=DEFAULT_DOT_RADIUS/2, color=ANIM_ORANGE).add_updater(lambda m: m.move_to(center()))
 
         arc_arrow = Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_updater(
             lambda m: m.become(Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_tip(tip_length=0.1)
@@ -223,17 +225,17 @@ class TicksAndLabelsFromCircle():
             tick.move_to((p[0] + np.cos(a) * r, p[1] + np.sin(a) * r, 0))
             ticks.add(tick)
 
-            inner_label = MathTex(inner, tex_template=segoe_template, color=ANIM_BLACK).scale(scale_factor)
+            inner_label = MathTex(inner, tex_template=segoe_template, color=TEXT_COLOR).scale(scale_factor)
             direction = DOWN*round(np.sin(a), 10)+LEFT*round(np.cos(a), 10)
             inner_label.next_to(tick.get_start(), direction, aligned_edge=direction, buff=0.23)
             inner_labels_tex.add(inner_label)
 
-            outer_label = MathTex(outer, tex_template=segoe_template, color=ANIM_BLACK).scale(scale_factor)
+            outer_label = MathTex(outer, tex_template=segoe_template, color=TEXT_COLOR).scale(scale_factor)
             direction = UP*round(np.sin(a), 10)+RIGHT*round(np.cos(a), 10)
             outer_label.next_to(tick, direction, aligned_edge=ORIGIN, buff=0.1)
             outer_labels_tex.add(outer_label)
         
-        inner_full_turn, outer_full_turn = [MathTex(i, tex_template=segoe_template, color=ANIM_BLACK).scale(scale_factor) for i in full_turn_labels]
+        inner_full_turn, outer_full_turn = [MathTex(i, tex_template=segoe_template, color=TEXT_COLOR).scale(scale_factor) for i in full_turn_labels]
 
         inner_full_turn.next_to(inner_labels_tex[0], DOWN, buff=0.1).align_to(inner_labels_tex[0], RIGHT)
         outer_full_turn.next_to(outer_labels_tex[0], DOWN, buff=0.1).align_to(outer_labels_tex[0], LEFT)
@@ -245,6 +247,68 @@ class TicksAndLabelsFromCircle():
         outer_labels_tex.add(outer_full_turn)
 
         return (ticks, inner_labels_tex, outer_labels_tex)
+
+class RadianCalculation(Scene):
+    def construct(self):
+        
+        angle_tracker = ValueTracker(PI/2)
+
+        circles = [
+            RadianCircle.get_circle_and_objs(1, coords=(i, 0, 0), tracker=angle_tracker, simplified=True, segment_color=ANIM_BLACK,
+            circle_stroke_width=5)
+            for i in range(-3, 4, 3)
+            ]
+
+        labels = [[r"90°"], [r"1/4"], [r"?", r"\,radians"]]
+        
+        labels_text_1 = [MathTex(*i, tex_template=segoe_template, color=TEXT_COLOR).scale(0.5).next_to(circles[j], DOWN, buff=0.7)
+        for j, i in enumerate(labels)]
+
+        equation = MathTex(r"{90°", r"\over 360°}", r"=", r"\frac{1}{4}", r"=", r"{?", r"\over 2\pi}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5)
+        equation.scale(0.6).to_edge(UP, buff=1)
+
+        equation2 = MathTex(r"{25°", r"\over 360°}", r"=", r"\frac{5}{72}", r"=", r"{?", r"\over 2\pi}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5)
+        equation2.scale(0.6).to_edge(UP, buff=1)
+
+        equation3 = MathTex(r"{?°", r"\over 360°}", r"=", r"\frac{1}{\pi}", r"=", r"{2\, rad", r"\over 2\pi\,rad}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5)
+        equation3.scale(0.6).to_edge(UP, buff=1)
+
+        labels = [[r"25°"], [r"25/360"], [r"?", r"\,radians"]]
+        
+        labels_text_2 = [MathTex(*i, tex_template=segoe_template, color=TEXT_COLOR).scale(0.5).next_to(circles[j], DOWN, buff=0.7)
+        for j, i in enumerate(labels)]
+
+        labels = [[r"?°"], [r"2/2\pi"], [r"2\,radians"]]
+        
+        labels_text_3 = [MathTex(*i, tex_template=segoe_template, color=TEXT_COLOR).scale(0.5).next_to(circles[j], DOWN, buff=0.7)
+        for j, i in enumerate(labels)]
+
+        self.add(get_background())
+
+        self.add(*circles, *labels_text_1)
+        self.play(
+            ReplacementTransform(labels_text_1[0].copy(), equation[0]),
+            ReplacementTransform(labels_text_1[1].copy(), equation[3]),
+            ReplacementTransform(labels_text_1[2][0].copy(), equation[5]),
+            FadeIn(equation[1:3], equation[4], equation[6]),
+            run_time=1.5
+            )
+        self.wait(2)
+        self.play(
+            angle_tracker.animate.set_value(25*DEGREES),
+            ReplacementTransform(equation, equation2),
+            ReplacementTransform(labels_text_1[0], labels_text_2[0]),
+            ReplacementTransform(labels_text_1[1], labels_text_2[1]),
+            run_time=1.7
+            )
+        self.wait(2)
+        self.play(
+            angle_tracker.animate.set_value(2),
+            ReplacementTransform(equation2, equation3),
+            *[ReplacementTransform(i, j) for i, j in zip(labels_text_2, labels_text_3)],
+            run_time=1.8
+            )
+        self.wait(2)
 
 class RadianDegreeConversion(Scene):
     def construct(self):
@@ -351,7 +415,7 @@ class RadianExplanation101(Scene):
         arcs_1_copy.z_index = 1000
         arcs_2_copy.z_index = 1000
 
-        equation = MathTex(r"C\,=\,2\pi r\,=\, \pi d", color=ANIM_BLACK).scale(0.9).to_edge(DOWN, buff=0.8)
+        equation = MathTex(r"C\,=\,2\pi r\,=\, \pi d", color=TEXT_COLOR).scale(0.9).to_edge(DOWN, buff=0.8)
 
         self.add(get_background())
 
@@ -407,7 +471,7 @@ class RadianExplanation101(Scene):
         circles.update()
         circles.suspend_updating()
         self.wait()
-        rad_title = Text('1 radian', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(ANIM_BLACK)
+        rad_title = Text('1 radian', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(TEXT_COLOR)
         self.play(FadeIn(rad_title))
         self.wait(2)
 
@@ -416,7 +480,7 @@ class RadianExplanation101(Scene):
             circles.resume_updating()
 
             self.play(angle_tracker_1.animate.set_value(i), angle_tracker_2.animate.set_value(i), FadeOut(rad_title))
-            rad_title = Text(str(i) + ' radians', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(ANIM_BLACK)
+            rad_title = Text(str(i) + ' radians', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(TEXT_COLOR)
             
             # This is to increase render speed
             circles.update()

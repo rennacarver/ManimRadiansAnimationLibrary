@@ -1,6 +1,4 @@
-from re import template
 from manim import *
-
 
 #   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.8.0
 #   navigate to /manim/mobject/geometry.py

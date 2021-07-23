@@ -1,6 +1,4 @@
-from re import S
 from manim import *
-from numpy import rad2deg
 
 #   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.8.0
 #   navigate to /manim/mobject/geometry.py

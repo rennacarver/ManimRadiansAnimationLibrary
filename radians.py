@@ -1,4 +1,6 @@
+from re import S
 from manim import *
+from numpy import rad2deg
 
 #   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.8.0
 #   navigate to /manim/mobject/geometry.py
@@ -48,6 +50,8 @@ class RadianCircle():
         tracker: ValueTracker = ValueTracker(0),
         show_angle_label: bool = True,
         x_tracker: ValueTracker = None,
+        y_tracker: ValueTracker = None,
+        radius_tracker: ValueTracker = None,
         simplified: bool = False,
         segment_color: str = ANIM_ORANGE,
         circle_stroke_width: float = 3
@@ -87,30 +91,39 @@ class RadianCircle():
                     label = MathTex("s")
                 else:
                     label = VGroup(DecimalNumber(round(tracker.get_value(), 2), num_decimal_places=2),
-                        Tex("r")).arrange(buff=0.15)
+                        MathTex("r")).arrange(buff=0.05)
+                    label[-1].align_to(label[0], DOWN)
             else:
                 dist = float(get_distance())
                 label = DecimalNumber(dist, num_decimal_places=1)
 
             label.scale(0.5).set_color(ANIM_ORANGE)
-            label.move_to(Arc(radius=radius+0.3, angle=tracker.get_value(), arc_center=center()).point_from_proportion(0.5))
+            label.move_to(Arc(radius=radius_func()+0.3, angle=tracker.get_value(), arc_center=center()).point_from_proportion(0.5))
 
             return label if tracker.get_value() > 0.5 else VMobject()
 
-        center = (lambda: coords) if x_tracker is None else (lambda: (x_tracker.get_value(), 0, 0))
+        center = lambda: coords
+        if x_tracker and not y_tracker:
+            center = lambda: (x_tracker.get_value(), 0, 0)
+        elif y_tracker and not x_tracker:
+            center = lambda: (0, y_tracker.get_value(), 0)
+        elif x_tracker and y_tracker:
+            center = lambda: (x_tracker.get_value(), y_tracker.get_value(), 0)
+
+        radius_func = (lambda: radius) if not radius_tracker else (lambda: radius_tracker.get_value())
 
         initial_angle = tracker.get_value()
 
-        circle = Circle(radius=radius, color=ANIM_BLACK, stroke_width=circle_stroke_width).move_to(center()).add_updater(
-            lambda m: m.move_to(center())
+        circle = Circle(radius=radius_func(), color=ANIM_BLACK, stroke_width=circle_stroke_width).move_to(center()).add_updater(
+            lambda m: m.become(Circle(radius=radius_func(), color=ANIM_BLACK, stroke_width=circle_stroke_width)).move_to(center())
         )
 
         fixed_segment = Line(start=center(), end=circle.get_right(), color=segment_color).add_updater(
             lambda m: m.become(Line(start=center(), end=circle.get_right(), color=segment_color))
         )
 
-        rotating_segment = Line(start=center(), end=(center()[0] + np.cos(initial_angle)*radius, center()[1] + np.sin(initial_angle)*radius, 0), color=segment_color).add_updater(
-            lambda m: m.become(Line(start=center(), end=(center()[0] + np.cos(tracker.get_value())*radius, center()[1] + np.sin(tracker.get_value())*radius, 0), color=segment_color))
+        rotating_segment = Line(start=center(), end=(center()[0] + np.cos(initial_angle)*radius_func(), center()[1] + np.sin(initial_angle)*radius_func(), 0), color=segment_color).add_updater(
+            lambda m: m.become(Line(start=center(), end=(center()[0] + np.cos(tracker.get_value())*radius_func(), center()[1] + np.sin(tracker.get_value())*radius_func(), 0), color=segment_color))
         )
 
         center_dot = Dot(circle.get_center(), radius=DEFAULT_DOT_RADIUS/2, color=segment_color).add_updater(lambda m: m.move_to(center()))
@@ -130,9 +143,9 @@ class RadianCircle():
 
         dot = Dot(circle.get_right(), color=ANIM_ORANGE).add_updater(lambda m: m.move_to(circle.get_right()))
 
-        arc_arrow = Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_updater(
-            lambda m: m.become(Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_tip(tip_length=0.1)
-                if tracker.get_value() > 0.1 else Arc(radius=radius, angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()))
+        arc_arrow = Arc(radius=radius_func(), angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_updater(
+            lambda m: m.become(Arc(radius=radius_func(), angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()).add_tip(tip_length=0.1)
+                if tracker.get_value() > 0.1 else Arc(radius=radius_func(), angle=tracker.get_value(), color=ANIM_ORANGE, arc_center=center()))
         )
 
         label_radius_tex = MathTex("r \ = \ " + str(label_radius) if not use_letters else "r", color=ANIM_ORANGE).scale(0.43).add_updater(
@@ -246,6 +259,122 @@ class TicksAndLabelsFromCircle():
 
         return (ticks, inner_labels_tex, outer_labels_tex)
 
+class EndAnimation(Scene):
+
+    def construct(self):
+
+        tmp = PolarPlane()
+
+        tracker =  ValueTracker(6.28)
+
+        circle1 = RadianCircle.get_circle_and_objs(8/4, 10, False, ORIGIN, tracker)
+        circle2 = RadianCircle.get_circle_and_objs(4.1/4, 5, False, (-4.5, 0, 0), tracker)
+        circle3 = RadianCircle.get_circle_and_objs(4.1/4, 5, True, (4.5, 0, 0), tracker)
+
+        circles = VGroup(circle1, circle2, circle3)
+
+        rad_title = Text('6.28 radians', font='Segoe UI Light').scale(0.8).shift(
+            3 * DOWN).set_color(
+            ANIM_BLACK)
+
+        rad_title_2 = Text('1 radian', font='Segoe UI Light').scale(0.8).shift(
+        3 * DOWN).set_color(
+        ANIM_BLACK)
+
+        radian_values = [i for i in range(0, 361, 15) if (((i-1)*15) % 30) != 0 or i in [45, 135, 225, 315]]
+
+        radian_labels = [tmp.get_radian_label(i/360).get_tex_string() for i in radian_values[1:]]
+        
+        outer_labels_str = [r"0\,rad"]
+
+        for label, value in zip(radian_labels, radian_values[1:]):
+            outer_labels_str.append(label + r"\,=\," + str(round(np.deg2rad(value), 4)) + r"\,rad")
+
+        circle = Circle(2, color=ANIM_BLACK)
+        circle_r = circle.copy()
+        d_labels = VGroup(*TicksAndLabelsFromCircle.create_ticks_and_labels(
+            circle=circle,
+            label_angles=[i*DEGREES for i in radian_values[:-1]],
+            inner_labels=[str(i) + "°" for i in radian_values[:-1]],
+            outer_labels=outer_labels_str[:-1],
+            full_turn_labels=("360°", outer_labels_str[-1])
+        ))
+
+        outer_labels_deg_str = [str(round(np.rad2deg(i), 4)) + "°" for i in range(7)]
+        outer_labels_deg_str[0] = "0°"
+        outer_labels_deg_str.append("360°")
+
+        r_labels = VGroup(*TicksAndLabelsFromCircle.create_ticks_and_labels(
+            circle=circle_r,
+            label_angles=range(7),
+            inner_labels=[str(i) + r"\,rad" for i in range(7)],
+            outer_labels=outer_labels_deg_str[:-1],
+            full_turn_labels=(r"6.2832\,rad", outer_labels_deg_str[-1]),
+            scale_factor=0.4
+        ))
+
+        a1 = ValueTracker(PI/2)
+        a2 = ValueTracker(25*DEGREES)
+        a3 = ValueTracker(2)
+
+        group_circles = VGroup()
+
+        for j, a in enumerate([a1, a2, a3]):
+            circles_ = VGroup(*[
+                RadianCircle.get_circle_and_objs(0.6, coords=(i, (1-j)*2.3, 0), tracker=a, simplified=True, segment_color=ANIM_BLACK,
+                circle_stroke_width=5)
+                for i in [-1.5, 0.5, 2.5]
+                ])
+            group_circles.add(circles_)
+
+        group_circles.clear_updaters()
+
+        labels = [[r"90°"], [r"1/4"], [r"?", r"\,radians"]]
+        
+        labels_text_1 = [MathTex(*i, tex_template=segoe_template, color=TEXT_COLOR).scale(0.5).next_to(group_circles[0][j], DOWN, buff=0.3)
+        for j, i in enumerate(labels)]
+
+        equation = MathTex(r"{90°", r"\over 360°}", r"=", r"\frac{1}{4}", r"=", r"{?", r"\over 2\pi}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5)
+        equation.scale(0.45).next_to(group_circles[0], buff=0.7)
+
+        equation2 = MathTex(r"{25°", r"\over 360°}", r"=", r"\frac{5}{72}", r"=", r"{?", r"\over 2\pi}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5)
+        equation2.scale(0.45).next_to(group_circles[1], buff=0.7)
+
+        equation3 = MathTex(r"{?°", r"\over 360°}", r"=", r"\frac{1}{\pi}", r"=", r"{2\, rad", r"\over 2\pi\,rad}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5)
+        equation3.scale(0.45).next_to(group_circles[2], buff=0.7)
+
+        labels = [[r"25°"], [r"25/360"], [r"?", r"\,radians"]]
+        
+        labels_text_2 = [MathTex(*i, tex_template=segoe_template, color=TEXT_COLOR).scale(0.5).next_to(group_circles[1][j], DOWN, buff=0.3)
+        for j, i in enumerate(labels)]
+
+        labels = [[r"?°"], [r"2/2\pi"], [r"2\,radians"]]
+        
+        labels_text_3 = [MathTex(*i, tex_template=segoe_template, color=TEXT_COLOR).scale(0.5).next_to(group_circles[2][j], DOWN, buff=0.3)
+        for j, i in enumerate(labels)]
+
+        self.add(get_background())
+        
+        self.add(circles, rad_title)
+        self.play(tracker.animate.set_value(1), ReplacementTransform(rad_title, rad_title_2), run_time=2)
+        circles.clear_updaters()
+        self.wait()
+        self.play(VGroup(circles, rad_title_2).animate.scale(0.3).to_corner(UL))
+        self.wait()
+        self.play(FadeIn(circle, d_labels))
+        self.wait()
+        self.play(VGroup(circle, d_labels).animate.scale(0.5).to_edge(LEFT).shift(UP*0.2))
+        self.wait()
+        self.play(FadeIn(circle_r, r_labels))
+        self.wait()
+        self.play(VGroup(circle_r, r_labels).animate.scale(0.5).to_corner(DL).set_x(circle.get_x()))
+        self.wait()
+        for c, l, e in zip(group_circles, [labels_text_1, labels_text_2, labels_text_3], [equation, equation2, equation3]):
+            self.play(FadeIn(c, *l))
+            self.wait()
+            self.play(FadeIn(e))
+            self.wait()
+
 class RadianCalculation(Scene):
     def construct(self):
         
@@ -303,7 +432,8 @@ class RadianCalculation(Scene):
         self.play(
             angle_tracker.animate.set_value(2),
             ReplacementTransform(equation2, equation3),
-            *[ReplacementTransform(i, j) for i, j in zip(labels_text_2, labels_text_3)],
+            *[ReplacementTransform(i, j) for i, j in zip(labels_text_2[:2], labels_text_3[:2])],
+            ReplacementTransform(labels_text_1[2], labels_text_3[2]),
             run_time=1.8
             )
         self.wait(2)
@@ -311,14 +441,16 @@ class RadianCalculation(Scene):
 class RadianDegreeConversion(Scene):
     def construct(self):
         
-        radian_values = [PI/4, PI/2, 3*PI/4, PI, 5*PI/4, 3*PI/2, 7*PI/4, 2*PI]
+        tmp = PolarPlane()
 
-        radian_labels = [r"\pi/4", r"\pi/2", r"3\pi/4", r"\pi", r"5\pi/4", r"3\pi/2", r"7\pi/4", r"2\pi"]
+        radian_values = range(0, 361, 45)[1:]
+
+        radian_labels = [tmp.get_radian_label(i/360).get_tex_string() for i in radian_values]
         
         outer_labels_str = [r"0\,rad"]
 
         for label, value in zip(radian_labels, radian_values):
-            outer_labels_str.append(label + r"\,=\," + str(round(value, 4)) + r"\,rad")
+            outer_labels_str.append(label + r"\,=\," + str(round(np.deg2rad(value), 4)) + r"\,rad")
 
         circle = Circle(2, color=ANIM_BLACK)
         circle2 = Circle(circle.copy().scale(0.7).width/2, color=ANIM_BLACK).shift(RIGHT*2.5)
@@ -1058,46 +1190,50 @@ class Circles0to6Rad(Scene):
         circle2 = RadianCircle.get_circle_and_objs(4.1/4, 5, False, (-4.5, 0, 0), tracker)
         circle3 = RadianCircle.get_circle_and_objs(4.1/4, 5, True, (4.5, 0, 0), tracker)
 
-        label_rad = Tex("radian", color=TEXT_COLOR)
-
-        rad = Integer(1, color=TEXT_COLOR).next_to(label_rad, LEFT, 0.15).align_to(label_rad, DOWN)
-
-        group = VGroup(rad, label_rad).set_color(TEXT_COLOR).next_to(circle1[0], DOWN).add_updater(lambda m: m.become(
-            VGroup(rad, label_rad).arrange(buff=0.2).set_color(TEXT_COLOR).next_to(circle1[0], DOWN)
-        ))
+        circles = VGroup(circle1, circle2, circle3)
 
         self.add(get_background())
 
-        #updates bottom title to plural or singular form depending on value
-        radtitle_value = 0
-
         self.add(circle1, circle2, circle3)
-        rad_title = Text(str(radtitle_value) + ' radians', font='Segoe UI Light').scale(0.8).shift(
-            3 * DOWN).set_color(
-            ANIM_BLACK)
+        circles.update()
+        circles.suspend_updating()
+
+        self.wait()
+
+        circles.resume_updating()
+
+        self.play(tracker.animate.set_value(1), run_time=1.5)
+
+        # This is to increase render speed
+        circles.update()
+        circles.suspend_updating()
+
+        self.wait()
+        rad_title = Text('1 radian', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(TEXT_COLOR)
         self.play(FadeIn(rad_title))
         self.wait(2)
-        radtitle_value += 1
+        self.should_update_mobjects()
 
-        for i in range(1, 7):
-            if i == 1:
-                self.play(tracker.animate.set_value(i), FadeOut(rad_title))
-                rad_title = Text(str(radtitle_value) + ' radian', font='Segoe UI Light').scale(0.8).shift(
-                    3 * DOWN).set_color(
-                    ANIM_BLACK)
-                self.play(FadeIn(rad_title))
-            elif i > 1:
-                self.play(tracker.animate.set_value(i), FadeOut(rad_title))
-                rad_title = Text(str(radtitle_value) + ' radians', font='Segoe UI Light').scale(0.8).shift(
-                    3 * DOWN).set_color(
-                    ANIM_BLACK)
-                self.play(FadeIn(rad_title))
+        for i in range(2, 7):
+            # This is to increase render speed
+            circles.resume_updating()
+
+            self.play(tracker.animate.set_value(i), FadeOut(rad_title), run_time=1.5)
+            rad_title = Text(str(i) + ' radians', font='Segoe UI Light').scale(0.8).shift(3 * DOWN).set_color(TEXT_COLOR)
+            
+            # This is to increase render speed
+            circles.update()
+            circles.suspend_updating()
+
+            self.play(FadeIn(rad_title))
             self.wait(2)
-            radtitle_value += 1
 
+        circles.resume_updating()
         self.play(tracker.animate.set_value(6.28), FadeOut(rad_title))
-        rad_title = Text('6.28 radians (2π)', font='Segoe UI Light').scale(0.8).shift(
+        rad_title = Text('6.28 radians', font='Segoe UI Light').scale(0.8).shift(
             3 * DOWN).set_color(
             ANIM_BLACK)
+        circles.update()
+        circles.suspend_updating()
         self.play(FadeIn(rad_title))
         self.wait(2)

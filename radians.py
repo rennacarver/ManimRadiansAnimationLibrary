@@ -472,8 +472,8 @@ class BigGridCompasses(Scene):
             stroke_width=6, tip_length=0.2, max_stroke_width_to_length_ratio=6)
 
         vec.add_updater(lambda m: m.become(
-            Arrow(start=outer_circle.get_center(), end=(outer_circle.get_x() + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0), color=ANIM_ORANGE, buff=0,
-            z_index=1000, stroke_width=6, tip_length=0.2, max_stroke_width_to_length_ratio=6)))
+            Arrow(start=outer_circle.get_center(), end=(outer_circle.get_x() + np.cos(tracker.get_value())*radius, np.sin(tracker.get_value())*radius, 0),
+                color=ANIM_ORANGE, buff=0, z_index=1000, stroke_width=6, tip_length=0.2, max_stroke_width_to_length_ratio=6)))
 
         vec.suspend_updating()
 

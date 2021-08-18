@@ -841,6 +841,11 @@ class RadianWarning(Scene):
         self.add(get_background())
         self.play(GrowFromCenter(group))
         self.wait(0.5)
+        self.play(FadeOut(group))
+        self.play(FadeIn(group))
+        self.play(FadeOut(group))
+        #self.play(ShrinkToCenter(group))
+        #self.wait(2)
 
 class RadianExplanation101(Scene):
     def construct(self):
@@ -1118,7 +1123,10 @@ class RadianDegreeConversion(Scene):
         for l in r_outer_labels[1:-1]:
             self.play(FadeIn(l), run_time=0.7)
             self.wait(0.4)
-        self.wait()
+        self.wait(2)
+        self.play(FadeOut(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels,
+                                 circle2,r_ticks, r_inner_labels, r_outer_labels)))
+        self.wait(2)
 
 class RadianCalculation(Scene):
     def construct(self):

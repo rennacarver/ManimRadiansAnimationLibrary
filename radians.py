@@ -848,7 +848,7 @@ class RadianExplanation101(Scene):
         angle_tracker_1 = ValueTracker(0)
         angle_tracker_2 = ValueTracker(1)
 
-        x_tracker = ValueTracker(0)
+        x_tracker = ValueTracker(-1.1)
         x_tracker_2 = ValueTracker(1.5)
 
         circle_1 = RadianCircle.get_circle_and_objs(1, 5, False, LEFT*1.1, angle_tracker_1, False, x_tracker)

@@ -848,12 +848,14 @@ class RadianExplanation101(Scene):
         angle_tracker_1 = ValueTracker(0)
         angle_tracker_2 = ValueTracker(1)
 
-        x_tracker = ValueTracker(0)
+        x_tracker = ValueTracker(-1.1)
         x_tracker_2 = ValueTracker(1.5)
+
+        rad_tracker = ValueTracker(1)
 
         circle_1 = RadianCircle.get_circle_and_objs(1, 5, False, LEFT*1.1, angle_tracker_1, False, x_tracker)
 
-        circle_2 = RadianCircle.get_circle_and_objs(2, 10, False, RIGHT*1.5, angle_tracker_2, False, x_tracker_2)
+        circle_2 = RadianCircle.get_circle_and_objs(1, 10, False, RIGHT*1.5, angle_tracker_2, False, x_tracker_2, radius_tracker=rad_tracker)
 
         circles = VGroup(circle_1, circle_2)
 
@@ -895,6 +897,7 @@ class RadianExplanation101(Scene):
             i.set_opacity(0)
             self.add(i)
             i.suspend_updating()
+        circle_2[0].suspend_updating()
 
         self.play(VGroup(center_dot, fixed_segment, theta, rotating_segment).animate.set_opacity(1))
 
@@ -902,9 +905,10 @@ class RadianExplanation101(Scene):
             i.resume_updating()
 
         self.wait(0.5)
-        self.play(x_tracker.animate.set_value(-2), FadeIn(circle_2[0].scale(0.5)))
+        self.play(x_tracker.animate.set_value(-2), FadeIn(circle_2[0]))
         self.wait(0.5)
-        self.play(circle_2[0].animate.scale(2))
+        self.play(rad_tracker.animate.set_value(2))
+        self.wait(0.5)
 
         for i in [label_distance, label_radius_tex]:
             i.update()

@@ -133,7 +133,7 @@ class RadianCircle():
             return label if tracker.get_value() > 0.5 else VMobject()
 
         center = lambda: coords
-        if x_tracker:
+        if x_tracker is not None:
             center = lambda: (x_tracker.get_value(), 0, 0)
 
         radius_func = (lambda: radius) if not radius_tracker else (lambda: radius_tracker.get_value())
@@ -848,12 +848,12 @@ class RadianExplanation101(Scene):
         angle_tracker_1 = ValueTracker(0)
         angle_tracker_2 = ValueTracker(1)
 
-        x_tracker = ValueTracker(-1.1)
+        x_tracker = ValueTracker(0)
         x_tracker_2 = ValueTracker(1.5)
 
         rad_tracker = ValueTracker(1)
 
-        circle_1 = RadianCircle.get_circle_and_objs(1, 5, False, LEFT*1.1, angle_tracker_1, False, x_tracker)
+        circle_1 = RadianCircle.get_circle_and_objs(1, 5, False, ORIGIN, angle_tracker_1, False, x_tracker)
 
         circle_2 = RadianCircle.get_circle_and_objs(1, 10, False, RIGHT*1.5, angle_tracker_2, False, x_tracker_2, radius_tracker=rad_tracker)
 
@@ -892,7 +892,7 @@ class RadianExplanation101(Scene):
         self.play(angle_tracker_1.animate.set_value(1), run_time=4)
         self.wait(0.5)
 
-        for i in [rotating_segment, fixed_segment, center_dot, theta, *circle_2[1:]]:
+        for i in [rotating_segment, fixed_segment, center_dot, theta]:
             i.update()
             i.set_opacity(0)
             self.add(i)
@@ -909,14 +909,14 @@ class RadianExplanation101(Scene):
         self.wait(0.5)
         self.play(rad_tracker.animate.set_value(2))
         self.wait(0.5)
-
-        for i in [label_distance, label_radius_tex]:
+        
+        for i in [label_distance, label_radius_tex, circle_2[1:]]:
             i.update()
             i.set_opacity(0)
             self.add(i)
             i.suspend_updating()
 
-        self.play(VGroup(label_radius_tex, label_distance, *circle_2[1:6], *circle_2[6:]).animate.set_opacity(1),
+        self.play(VGroup(label_radius_tex, label_distance, *circle_2[1:6], *circle_2[7:]).animate.set_opacity(1),
             circle_2[6].animate.set_stroke(opacity=1))
 
         for i in [label_distance, label_radius_tex, *circle_2[1:]]:

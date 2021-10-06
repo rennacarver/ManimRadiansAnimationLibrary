@@ -35,7 +35,8 @@ def get_background():
             width=config["frame_width"],
             height=config["frame_width"],
             stroke_width=0,
-            fill_color=color.color_gradient(["#D5D4C9","#DBD7CF"], 32),
+            fill_color=color.color_gradient(["#D5D4C9","#DBD7CF"], 32), #astroparche_light
+            #fill_color=color.color_gradient(["#ECECEC", "#F2F2F2"], 32), #whiteboard_modern
             fill_opacity=1, z_index=-1000)
     return background
 
@@ -381,11 +382,11 @@ class GridCompass(Scene):
         red_dot = Dot(point=(-buff*1.5, -buff*1.5, 0), radius=DEFAULT_DOT_RADIUS * 3, color=ANIM_ORANGE, z_index=1000)
         green_dot = Dot(point=(buff*1.5, buff*1.5, 0), radius=DEFAULT_DOT_RADIUS * 3, color=ANIM_AQUA, z_index=1000)
 
-        fifth = Tex("5th", color=TEXT_COLOR).scale(0.5).next_to(red_dot, LEFT, buff=1).shift(UP*0.2)
-        roosevelt = Tex("Roosevelt", color=TEXT_COLOR).scale(0.5).next_to(red_dot, DOWN, buff=0.45).shift(LEFT*0.7)
+        fifth = Tex("5th", color=TEXT_COLOR).scale(0.5).next_to(red_dot, LEFT, buff=0.75).shift(UP*0.01)
+        roosevelt = Tex("Roosevelt", color=TEXT_COLOR).scale(0.5).next_to(red_dot, DOWN, buff=0.6)#.shift(LEFT*0.1)
 
-        eighth = Tex("8th", color=TEXT_COLOR).scale(0.5).next_to(green_dot, RIGHT, buff=0.6).shift(UP*0.2)
-        columbus = Tex("Columbus", color=TEXT_COLOR).scale(0.5).next_to(green_dot, UP, buff=0.5).shift(LEFT*0.7)
+        eighth = Tex("8th", color=TEXT_COLOR).scale(0.5).next_to(green_dot, RIGHT, buff=0.6)#.shift(UP*0.2)
+        columbus = Tex("Columbus", color=TEXT_COLOR).scale(0.5).next_to(green_dot, UP, buff=0.5).shift(UP*0.1)
 
         grid_objs = VGroup(grid, green_dot, red_dot, fifth, eighth, roosevelt, columbus)
 
@@ -411,13 +412,13 @@ class GridCompass(Scene):
 
         self.play(Create(grid), run_time=4)
         self.wait(0.5)
-        self.play(Create(red_dot), run_time=0.5)
+        self.play(Write(red_dot), run_time=0.5)
         self.wait(0.2)
-        self.play(Write(VGroup(fifth, roosevelt)))
+        self.play(FadeIn(VGroup(fifth, roosevelt)))
         self.wait(0.3)
-        self.play(Create(green_dot), run_time=0.5)
+        self.play(Write(green_dot), run_time=0.5)
         self.wait(0.2)
-        self.play(Write(VGroup(eighth, columbus)))
+        self.play(FadeIn(VGroup(eighth, columbus)))
         self.wait(0.5)
         self.play(
             Write(compass1),
@@ -443,8 +444,8 @@ class BigGridCompasses(Scene):
         red_dot = Dot(point=(-buff*4.5, -buff*4.5, 0), radius=DEFAULT_DOT_RADIUS * 2, color=ANIM_ORANGE, z_index=1000)
         green_dot = Dot(point=(buff*6.5, buff*3.5, 0), radius=DEFAULT_DOT_RADIUS * 2, color=ANIM_AQUA, z_index=1000)
 
-        panama = Tex("Panama", color=TEXT_COLOR).scale(0.5).next_to(red_dot, DOWN, buff=0.8).shift(LEFT*0.5)
-        rotterdam = Tex("Rotterdam", color=TEXT_COLOR).scale(0.5).next_to(green_dot, UP, buff=1.5).shift(LEFT*0.5)
+        panama = Tex("Panama", color=TEXT_COLOR).scale(0.5).next_to(red_dot, DOWN, buff=0.8)#.shift(LEFT*0.5)
+        rotterdam = Tex("Rotterdam", color=TEXT_COLOR).scale(0.5).next_to(green_dot, UP, buff=1.5)#.shift(LEFT*0.5)
 
         grid_objs = VGroup(grid, green_dot, red_dot, panama, rotterdam)
 
@@ -485,7 +486,7 @@ class BigGridCompasses(Scene):
 
         grid_copy = grid.copy().shift(shift_factor)
 
-        earth = Tex("Earth", color=TEXT_COLOR).scale(0.5).move_to(panama).shift(shift_factor)
+        earth = Tex("Earth", color=TEXT_COLOR).scale(0.5).move_to(panama).shift(shift_factor).shift(0.2*DOWN)
         moon = Tex("Moon", color=TEXT_COLOR).scale(0.5).move_to(rotterdam).shift(shift_factor)
 
         copy_dots = [green_dot.copy().shift(UP*DEFAULT_DOT_RADIUS*3*i+LEFT*DEFAULT_DOT_RADIUS*3*i+shift_factor) for i in range(1, 3)]
@@ -580,7 +581,7 @@ class BigGridCompasses(Scene):
             )
         self.wait(0.5)
         self.play(Create(copy_dots))
-        self.wait(0.5)
+        self.wait(2.0)
         self.remove(grid, grid_copy)
         self.play(
             FadeOut(earth, moon, final_vector, copy_dots, red_dot, green_dot, rectangle),
@@ -698,7 +699,7 @@ class DashedCircles(ZoomedScene):
         self.play(GrowArrow(vec))
         vec.resume_updating()
         self.wait(0.5)
-        self.play(FadeIn(timer[0][0], timer[1]), run_time=0.8)
+        self.play(FadeIn(timer[0][0], timer[1]), run_time=2)
         self.wait(0.3)
         Timer.animate(self, timer)
         self.wait(0.5)
@@ -895,6 +896,11 @@ class RadianWarning(Scene):
         self.add(get_background())
         self.play(GrowFromCenter(group))
         self.wait(0.5)
+        self.play(FadeOut(group))
+        self.play(FadeIn(group))
+        self.play(FadeOut(group))
+        #self.play(ShrinkToCenter(group))
+        #self.wait(2)
 
 class RadianExplanation101(Scene):
     def construct(self):
@@ -1176,7 +1182,10 @@ class RadianDegreeConversion(Scene):
         for l in r_outer_labels[1:-1]:
             self.play(FadeIn(l), run_time=0.7)
             self.wait(0.4)
-        self.wait()
+        self.wait(2)
+        self.play(FadeOut(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels,
+                                 circle2,r_ticks, r_inner_labels, r_outer_labels)))
+        self.wait(2)
 
 class RadianCalculation(Scene):
     def construct(self):

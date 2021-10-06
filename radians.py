@@ -1,4 +1,3 @@
-from re import M
 from manim import *
 
 #   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.11.0

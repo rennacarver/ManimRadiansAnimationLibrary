@@ -1223,7 +1223,7 @@ class RadianCalculation(Scene):
 
         eq2_3 = MathTex(r"\frac{5\pi}{36}", tex_template=segoe_template, color=TEXT_COLOR, stroke_width=0.5).scale(0.6).move_to(eq2_2)
 
-        equation3 = MathTex(r"{?°", r"\over 360°}", r"=", r"\frac{1}{\pi}", r"=", r"{2\, rad", r"\over 2\pi\,rad}", tex_template=segoe_template,
+        equation3 = MathTex(r"{?°", r"\over 360°}", r"=", r"\frac{2}{2\pi}", r"=", r"{2\, rad", r"\over 2\pi\,rad}", tex_template=segoe_template,
             color=TEXT_COLOR, stroke_width=0.5).scale(0.6).to_edge(UP, buff=1)
         
         eq3_1 = MathTex(r"?°", r"=", r"\frac{1}{\pi}", r"360°", r"=", r"{2\, rad", r"\over 2\pi\,rad}", r"360°", tex_template=segoe_template,
@@ -1271,13 +1271,21 @@ class RadianCalculation(Scene):
             eq1_1[6:].animate.next_to(eq1_2, buff=0.1)
             )
         self.wait(2)
-        eq1_1 = VGroup(eq1_1[:4], eq1_2, eq1_1[6:])
+        equation1 = VGroup(eq1_1[:4], eq1_2, eq1_1[6:])
+        self.play(FadeOut(equation1))
         self.play(
             angle_tracker.animate.set_value(25*DEGREES),
-            ReplacementTransform(eq1_1, equation2),
             ReplacementTransform(labels_text_1[0], labels_text_2[0]),
             ReplacementTransform(labels_text_1[1], labels_text_2[1]),
             run_time=1.7
+            )
+        self.wait()
+        self.play(
+            ReplacementTransform(labels_text_2[0].copy(), equation2[0]),
+            ReplacementTransform(labels_text_2[1].copy(), equation2[3]),
+            ReplacementTransform(labels_text_2[2][0].copy(), equation2[5]),
+            FadeIn(equation2[1:3], equation2[4], equation2[6]),
+            run_time=1.5
             )
         self.wait()
         self.play(
@@ -1315,12 +1323,20 @@ class RadianCalculation(Scene):
         self.wait()
         equation2 = VGroup(eq2_0[:4], eq2_3, eq2_0[6:])
         self.wait(2)
+        self.play(FadeOut(equation2))
         self.play(
             angle_tracker.animate.set_value(2),
-            ReplacementTransform(equation2, equation3),
             *[ReplacementTransform(i, j) for i, j in zip(labels_text_2[:2], labels_text_3[:2])],
             ReplacementTransform(labels_text_1[2], labels_text_3[2]),
             run_time=1.8
+            )
+        self.wait()
+        self.play(
+            ReplacementTransform(labels_text_3[0].copy(), equation3[0]),
+            ReplacementTransform(labels_text_3[1].copy(), equation3[3]),
+            ReplacementTransform(labels_text_3[2][0].copy(), equation3[5]),
+            FadeIn(equation3[1:3], equation3[4], equation3[6]),
+            run_time=1.5
             )
         self.wait()
         self.play(
@@ -1341,7 +1357,12 @@ class RadianCalculation(Scene):
             TransformMatchingShapes(eq3_1[5:7], eq3_2),
             eq3_1[:5].animate.next_to(eq3_2, LEFT, buff=0.1),
             )
-        self.wait(2)
+        self.wait()
+        equation3 = VGroup(eq3_1[:5], eq3_2, eq3_1[7:])
+        for i in circles:
+            i.clear_updaters()
+        self.play(FadeOut(equation3, *circles, *labels_text_3))
+        self.wait()
 
 class Circles0to6Rad(Scene):
 

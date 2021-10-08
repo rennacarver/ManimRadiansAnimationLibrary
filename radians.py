@@ -2,7 +2,7 @@ from manim import *
 
 #   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.11.0
 #   navigate to /manim/mobject/geometry.py
-#   comment out line 140 "self.reset_endpoints_based_on_top(tip, at_start)"
+#   comment out line 142 "self.reset_endpoints_based_on_top(tip, at_start)"
 
 #   for scenes that render slowly due to updaters, modify the following code
 #   manim>Mobject>types>vectorized_mobject.py>VMobject>align_points

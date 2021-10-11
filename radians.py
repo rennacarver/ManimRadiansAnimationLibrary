@@ -674,7 +674,7 @@ class DashedCircles(ZoomedScene):
         dasher = VMobject().add_updater(lambda m, dt: show_dashes_and_labels(angle_tracker.get_value(), dt), call_updater=True)
         dasher.suspend_updating()
 
-        circle_r = Circle(radius=1.5, color=ANIM_BLACK).shift(RIGHT*4.5+DOWN*0.8)
+        circle_r = Circle(radius=1.5, color=ANIM_BLACK).shift(RIGHT*4.5+DOWN*1.2)
         labels_r = self.get_labels(tmp_circ, labels=["0, 100", "12.5", "25", "37.5", "50", "52.5", "75", "87.5"])
         dashes_r = self.get_dashes(circle_r)
         vec_r = self.get_arrow(circle_r, angle_tracker)
@@ -683,7 +683,7 @@ class DashedCircles(ZoomedScene):
 
         group_r = VGroup(circle_r, labels_r, vec_r, angle_label_r, dashes_r)
 
-        circle_l = Circle(radius=1.5, color=ANIM_BLACK).shift(LEFT*4.5+DOWN*0.8)
+        circle_l = Circle(radius=1.5, color=ANIM_BLACK).shift(LEFT*4.5+DOWN*1.2)
         labels_l = self.get_labels(tmp_circ, labels=["0, 400", "50", "100", "150", "200", "250", "300", "350"])
         dashes_l = self.get_dashes(circle_l)
         vec_l = self.get_arrow(circle_l, angle_tracker)
@@ -796,8 +796,8 @@ class DashedCircles(ZoomedScene):
         tmp_ang_label.add_updater(lambda m, dt: m.become(self.get_angle_label(vec, angle_tracker.get_value(), 360, m=m)),
             call_updater=True)
 
-        labels_r.shift(RIGHT*4.5+DOWN*0.8)
-        labels_l.shift(LEFT*4.5+DOWN*0.8)
+        labels_r.shift(RIGHT*4.5+DOWN*1.2)
+        labels_l.shift(LEFT*4.5+DOWN*1.2)
         labels.clear_updaters()
         small_labels.clear_updaters()
 

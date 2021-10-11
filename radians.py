@@ -756,7 +756,7 @@ class DashedCircles(ZoomedScene):
             self.get_angle_label(vec, angle_tracker.get_value(), 360, decimal_places=2, scaling=1.3, m=m)))
         
         # Move zooming frame to the angle_label
-        frame.move_to(angle_label) 
+        frame.move_to(angle_label).shift(DOWN*0.065+LEFT*0.07) 
 
         self.play(Create(frame))
         self.activate_zooming()
@@ -914,6 +914,12 @@ class DashedCircles(ZoomedScene):
             string += "°"
         pos = arrow.copy().scale(scaling).get_end()
         label = Text(string, font="Segoe UI Light", color=ANIM_ORANGE, stroke_width=1).scale(0.32)
+        if decimal_places == 2 and int(custom_angle) == 40:
+                self.pos = pos + LEFT * label[:3].width
+
+        if decimal_places == 2 and int(custom_angle) == 39:
+            return label.move_to(self.pos, aligned_edge=LEFT)
+        
         return label.move_to(pos)
 
 class RadianWarning(Scene):
@@ -1153,7 +1159,7 @@ class RadianDegreeConversion(Scene):
             outer_labels_str.append(label + r"\,=\," + str(round(np.deg2rad(value), 4)) + r"\,rad")
 
         circle = Circle(2, color=ANIM_BLACK)
-        circle2 = Circle(circle.copy().scale(0.7).width/2, color=ANIM_BLACK).shift(RIGHT*2.5)
+        circle2 = Circle(circle.copy().scale(0.93).width/2, color=ANIM_BLACK).shift(RIGHT*3.3)
 
         d_ticks, d_inner_labels, d_outer_labels = TicksAndLabelsFromCircle.create_ticks_and_labels(
             circle=circle,
@@ -1197,7 +1203,7 @@ class RadianDegreeConversion(Scene):
             self.play(FadeIn(l), run_time=0.7)
             self.wait(0.4)
         self.wait()
-        self.play(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels).animate.scale(0.7).shift(LEFT*2.5),
+        self.play(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels).animate.scale(0.93).shift(LEFT*3.3),
             Create(circle2, run_time=1.5))
         self.wait()
         for t, l in zip(r_ticks, r_inner_labels):
@@ -1215,9 +1221,9 @@ class RadianDegreeConversion(Scene):
             self.play(FadeIn(l), run_time=0.7)
             self.wait(0.4)
         self.wait(2)
-        self.play(FadeOut(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels,
-                                 circle2,r_ticks, r_inner_labels, r_outer_labels)))
-        self.wait(2)
+        # self.play(FadeOut(VGroup(circle, d_ticks, d_inner_labels, d_outer_labels,
+        #                          circle2,r_ticks, r_inner_labels, r_outer_labels)))
+        # self.wait(2)
 
 class RadianCalculation(Scene):
     def construct(self):

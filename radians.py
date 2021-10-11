@@ -4,7 +4,18 @@ from manim import *
 #   navigate to /manim/mobject/geometry.py
 #   comment out line 142 "self.reset_endpoints_based_on_top(tip, at_start)"
 
-config.disable_caching = True
+#   for scenes that render slowly due to updaters, modify the following code
+#   manim>Mobject>types>vectorized_mobject.py>VMobject>align_points
+#   for n in range(n_subpaths):
+#             sp1 = get_nth_subpath(subpaths1, n)
+#             sp2 = get_nth_subpath(subpaths2, n)
+#             diff1 = max(0, (len(sp2) - len(sp1)) // nppcc)
+#             diff2 = max(0, (len(sp1) - len(sp2)) // nppcc)
+#             if max(len(sp1), len(sp2)) < 350:
+#                 sp1 = self.insert_n_curves_to_point_list(diff1, sp1)
+#                 sp2 = self.insert_n_curves_to_point_list(diff2, sp2)
+#             new_path1 = np.append(new_path1, sp1, axis=0)
+#             new_path2 = np.append(new_path2, sp2, axis=0)
 
 config.tex_template = TexTemplate()
 

@@ -1,8 +1,10 @@
 from manim import *
 
-#   for scene 'Circles0to6Rad' and 'RadianExplanation101' in manim CE v0.11.0
+#   for scenes 'Circles0to6Rad', 'RadianExplanation101' and 'EndAnimation' in manim CE v0.11.0
 #   navigate to /manim/mobject/geometry.py
-#   comment out line 140 "self.reset_endpoints_based_on_top(tip, at_start)"
+#   comment out line 142 "self.reset_endpoints_based_on_top(tip, at_start)"
+
+config.disable_caching = True
 
 config.tex_template = TexTemplate()
 
@@ -605,7 +607,9 @@ class DashedCircles(ZoomedScene):
 
     def construct(self):
         config.disable_caching = True
-        def show_dashes_and_labels(angle):
+        def show_dashes_and_labels(angle, dt):
+            if dt == 0:
+                return
             angle_int = int(angle)
             angles_to_show = [i % 360 for i in range(self.last_dashed_angle + 1, angle_int + 1)]
             label_to_show = np.intersect1d(angles_to_show, angles_w_labels)
@@ -656,10 +660,10 @@ class DashedCircles(ZoomedScene):
 
         unfold_camera = UpdateFromFunc(zd_rect, lambda rect: rect.replace(zoomed_display))
 
-        dasher = VMobject().add_updater(lambda m: show_dashes_and_labels(angle_tracker.get_value()))
+        dasher = VMobject().add_updater(lambda m, dt: show_dashes_and_labels(angle_tracker.get_value(), dt), call_updater=True)
         dasher.suspend_updating()
 
-        circle_r = Circle(radius=1.5, color=ANIM_BLACK).shift(RIGHT*4.5)
+        circle_r = Circle(radius=1.5, color=ANIM_BLACK).shift(RIGHT*4.5+DOWN*0.8)
         labels_r = self.get_labels(tmp_circ, labels=["0, 100", "12.5", "25", "37.5", "50", "52.5", "75", "87.5"])
         dashes_r = self.get_dashes(circle_r)
         vec_r = self.get_arrow(circle_r, angle_tracker)
@@ -668,7 +672,7 @@ class DashedCircles(ZoomedScene):
 
         group_r = VGroup(circle_r, labels_r, vec_r, angle_label_r, dashes_r)
 
-        circle_l = Circle(radius=1.5, color=ANIM_BLACK).shift(LEFT*4.5)
+        circle_l = Circle(radius=1.5, color=ANIM_BLACK).shift(LEFT*4.5+DOWN*0.8)
         labels_l = self.get_labels(tmp_circ, labels=["0, 400", "50", "100", "150", "200", "250", "300", "350"])
         dashes_l = self.get_dashes(circle_l)
         vec_l = self.get_arrow(circle_l, angle_tracker)
@@ -703,15 +707,24 @@ class DashedCircles(ZoomedScene):
         Timer.animate(self, timer)
         self.wait(0.5)
         angle_label.suspend_updating()
-        self.play(Write(angle_label))
-        angle_label.resume_updating()
+        angle_label_copy = angle_label.copy().clear_updaters()
+        self.play(Write(angle_label_copy))
+        self.wait()
+        self.play(FadeOut(angle_label_copy))
         self.wait(0.5)
 
         dasher.resume_updating()
         self.play(angle_tracker.animate().set_value(0), run_time=5.3)
         self.wait(0.5)
+        angle_label.resume_updating()
+        angle_label.update()
+        angle_label.suspend_updating()
+        self.play(FadeIn(angle_label))
+        angle_label.resume_updating()
+        self.wait(0.7)
         self.play(angle_tracker.animate().set_value(400), run_time=5.3)
         self.wait(0.5)
+        dasher.clear_updaters()
         self.play(angle_tracker.animate.set_value(360), run_time=2)
         angle_tracker.set_value(0)
         self.wait(0.5)
@@ -772,8 +785,8 @@ class DashedCircles(ZoomedScene):
         tmp_ang_label.add_updater(lambda m, dt: m.become(self.get_angle_label(vec, angle_tracker.get_value(), 360, m=m)),
             call_updater=True)
 
-        labels_r.shift(RIGHT*4.5)
-        labels_l.shift(LEFT*4.5)
+        labels_r.shift(RIGHT*4.5+DOWN*0.8)
+        labels_l.shift(LEFT*4.5+DOWN*0.8)
         labels.clear_updaters()
         small_labels.clear_updaters()
 
@@ -786,6 +799,13 @@ class DashedCircles(ZoomedScene):
 
         self.play(FadeIn(group_r, group_l), radius_tracker.animate.set_value(1.5), TransformMatchingShapes(dashes, small_dashes),
             ReplacementTransform(tmp_label, small_labels), run_time=2)
+        self.play(VGroup(
+            circle.clear_updaters(),
+            small_dashes,
+            small_labels
+            ).animate.shift(UP*1.2),
+            run_time=1.2
+            )
         self.wait(0.5)
 
         for i in objs_w_updaters:
@@ -799,7 +819,7 @@ class DashedCircles(ZoomedScene):
         angle_label_l.clear_updaters()
         angle_label_r.clear_updaters()
         tmp_ang_label.clear_updaters()
-        self.play(FadeOut(angle_label_l, angle_label_r, tmp_ang_label), run_time=0.8)
+        # self.play(FadeOut(angle_label_l, angle_label_r, tmp_ang_label), run_time=0.8)
         self.wait(0.5)
         
         #############
@@ -808,21 +828,21 @@ class DashedCircles(ZoomedScene):
         r = radius_tracker.get_value if radius_tracker else lambda: circle.radius
 
         angle = angle_tracker.get_value() * DEGREES if angle_tracker else 0
-        p = circle.get_center()
+        p = circle.get_center
 
         a = angle_tracker.get_value
 
         arrow = Arrow(
-            start=p,
-            end=(p[0] + np.cos(angle)*r(), p[1] + np.sin(angle)*r(), 0),
+            start=p(),
+            end=(p()[0] + np.cos(angle)*r(), p()[1] + np.sin(angle)*r(), 0),
             color=ANIM_ORANGE,
             tip_length=0.2,
             buff=0)
 
         arrow.add_updater(lambda m: m.become(
             Arrow(
-            start=p,
-            end=(p[0] + np.cos(a()*DEGREES)*r(), p[1] + np.sin(a()*DEGREES)*r(), 0),
+            start=p(),
+            end=(p()[0] + np.cos(a()*DEGREES)*r(), p()[1] + np.sin(a()*DEGREES)*r(), 0),
             color=ANIM_ORANGE,
             tip_length=0.2,
             buff=0))
@@ -871,16 +891,18 @@ class DashedCircles(ZoomedScene):
 
         return labels_text
 
-    def get_angle_label(self, arrow, angle, max_angle, is_degree=True, decimal_places=0, scaling=1.25, m=None):
+    def get_angle_label(self, arrow, angle, max_angle, is_degree=True, decimal_places=0, scaling=1.29, m=None):
         angle_cut = angle % 360
         custom_angle = round(angle_cut * max_angle / 360, decimal_places if decimal_places else None)
         if angle < 0:
             custom_angle = round(angle, decimal_places if decimal_places else None)
+        if custom_angle == 0:
+            return VMobject()
         string = str(custom_angle)
         if is_degree:
             string += "°"
         pos = arrow.copy().scale(scaling).get_end()
-        label = Text(string, font="Segoe UI Light", color=ANIM_ORANGE, stroke_width=1).scale(0.34)
+        label = Text(string, font="Segoe UI Light", color=ANIM_ORANGE, stroke_width=1).scale(0.32)
         return label.move_to(pos)
 
 class RadianWarning(Scene):

@@ -7,13 +7,23 @@ www.projectcarver.com/blog
 <img src="https://github.com/rennacarver/rennacarver/blob/main/Radians%20Animation%20Library.gif?raw=true" alt="Radians Animation">
 <a href="https://youtu.be/y1Tcww-9Ero">Youtube Link</a>
 
-## Features
+## Description
 
-- Click on books in the book list to bring them back to the stage
-- Remove books from the list
-- Pickup where you left off with browser local storage
-- Download your lists to CSV for backup
-- Quick clear for the book list
+This video is the very first of (hopefully) many in a series on trigonometry. 
+
+Prerequisites: It's not required but it does help if you're familiar with ratios, fractions, and algebra equations to understand all the concepts in this video.
+
+0:00 - What is direction/rotation?
+3:15 - Degrees
+4:00 - Why 360?
+4:38 - Radians
+7:12 - Radians vs. Degrees
+9:48 - Recap
+
+The review sheet for this video can be found here:
+https://www.projectcarver.com/concept-sheets
+
+This video is an entry in 3b1b's SOME competition: https://www.3blue1brown.com/blog/some1
 
 ## How It's Made:
 
